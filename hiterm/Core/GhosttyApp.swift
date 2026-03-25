@@ -182,10 +182,17 @@ class GhosttyApp {
         let pasteboard = NSPasteboard.general
         guard let str = pasteboard.string(forType: .string) else { return false }
 
-        if let surface = state.map({ ghostty_surface_t(mutating: $0) }) {
-            str.withCString { ptr in
-                ghostty_surface_complete_clipboard_request(surface, ptr, state, true)
-            }
+        // The `ud` parameter in the callback is the surface's userdata (our TerminalSurfaceView).
+        // We need to find the surface from it. The `state` is an opaque completion token
+        // that must be passed back to ghostty_surface_complete_clipboard_request.
+        // Since we receive `ud` (GhosttyApp userdata, i.e. self), we need to find the
+        // focused surface through the notification system or by storing a reference.
+        // For now, find the surface via the key window's first responder.
+        guard let surfaceView = NSApp.keyWindow?.firstResponder as? TerminalSurfaceView,
+              let surface = surfaceView.surface else { return false }
+
+        str.withCString { ptr in
+            ghostty_surface_complete_clipboard_request(surface, ptr, state, true)
         }
         return true
     }
