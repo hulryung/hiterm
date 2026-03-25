@@ -1,0 +1,61 @@
+name: hiterm
+options:
+  bundleIdPrefix: com.hiterm
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+
+targets:
+  hiterm:
+    type: application
+    platform: macOS
+    sources:
+      - path: hiterm
+        excludes:
+          - "*.xcodeproj"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hiterm.app
+        PRODUCT_NAME: hiterm
+        INFOPLIST_FILE: hiterm/App/Info.plist
+        SWIFT_OBJC_BRIDGING_HEADER: ""
+        LIBRARY_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/libs/GhosttyKit/lib"
+        HEADER_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/libs/GhosttyKit/include"
+        SWIFT_INCLUDE_PATHS:
+          - "$(PROJECT_DIR)/libs/GhosttyKit/include"
+        OTHER_LDFLAGS:
+          - "-lghostty"
+          - "-lc++"
+          - "-liconv"
+          - "-lz"
+          - "-framework Carbon"
+          - "-framework CoreFoundation"
+          - "-framework CoreGraphics"
+          - "-framework CoreText"
+          - "-framework CoreVideo"
+          - "-framework QuartzCore"
+          - "-framework IOSurface"
+          - "-framework Metal"
+          - "-framework AppKit"
+          - "-framework Foundation"
+        OTHER_SWIFT_FLAGS:
+          - "-Xcc"
+          - "-fmodule-map-file=$(PROJECT_DIR)/libs/GhosttyKit/include/module.modulemap"
+        LD_RUNPATH_SEARCH_PATHS:
+          - "@executable_path/../Frameworks"
+    dependencies: []
+    info:
+      path: hiterm/App/Info.plist
+    entitlements:
+      path: hiterm/App/hiterm.entitlements
+    preBuildScripts: []
+    scheme:
+      testTargets: []
+      gatherCoverageData: false

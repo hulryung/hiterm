@@ -15,7 +15,8 @@ DerivedData/
 xcuserdata/
 
 # libghostty artifacts
-libs/GhosttyKit/libghostty.a
+libs/GhosttyKit/lib/*.a
+libs/GhosttyKit/lib/*.dylib
 
 # macOS
 .DS_Store
