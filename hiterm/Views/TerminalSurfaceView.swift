@@ -439,6 +439,36 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         ghostty_surface_mouse_pos(surface, pos.x, frame.height - pos.y, mods)
     }
 
+    // MARK: - Copy / Paste
+
+    @objc func copy(_ sender: Any?) {
+        guard let surface else { return }
+        guard ghostty_surface_has_selection(surface) else { return }
+
+        var text = ghostty_text_s()
+        guard ghostty_surface_read_selection(surface, &text) else { return }
+        defer { ghostty_surface_free_text(surface, &text) }
+
+        if let ptr = text.text, text.text_len > 0 {
+            let str = String(cString: ptr)
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(str, forType: .string)
+        }
+    }
+
+    @objc func paste(_ sender: Any?) {
+        guard let surface else { return }
+        let pasteboard = NSPasteboard.general
+        guard let str = pasteboard.string(forType: .string) else { return }
+        let len = str.utf8CString.count
+        if len > 0 {
+            str.withCString { ptr in
+                ghostty_surface_text(surface, ptr, UInt(len - 1))
+            }
+        }
+    }
+
     // MARK: - Modifier Translation
 
     static func ghosttyMods(from flags: NSEvent.ModifierFlags) -> ghostty_input_mods_e {

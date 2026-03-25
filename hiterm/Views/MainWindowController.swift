@@ -130,6 +130,8 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
     private func setupSwipeGesture() {
         let gesture = NSPanGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
         gesture.numberOfTouchesRequired = 2
+        gesture.delaysPrimaryMouseButtonEvents = false
+        gesture.delaysSecondaryMouseButtonEvents = false
         window?.contentView?.addGestureRecognizer(gesture)
         swipeGestureRecognizer = gesture
     }
