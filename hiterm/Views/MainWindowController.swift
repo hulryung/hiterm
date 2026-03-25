@@ -8,7 +8,6 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
     private var currentTabIndex: Int = 0
     private var tabBarView: TabBarView!
     private var contentContainerView: NSView!
-    private var swipeGestureRecognizer: NSPanGestureRecognizer?
     private var observers: [NSObjectProtocol] = []
 
     struct TabItem {
@@ -43,7 +42,6 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
         setupViews()
         createInitialTab()
         setupNotifications()
-        setupSwipeGesture()
     }
 
     required init?(coder: NSCoder) {
@@ -123,66 +121,26 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
                 forName: .hitermToggleFullscreen, object: nil, queue: .main
             ) { [weak self] _ in self?.window?.toggleFullScreen(nil) }
         )
-    }
-
-    // MARK: - Swipe Gesture for Tab Switching
-
-    private func setupSwipeGesture() {
-        let gesture = NSPanGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
-        gesture.numberOfTouchesRequired = 2
-        gesture.delaysPrimaryMouseButtonEvents = false
-        gesture.delaysSecondaryMouseButtonEvents = false
-        window?.contentView?.addGestureRecognizer(gesture)
-        swipeGestureRecognizer = gesture
-    }
-
-    private var swipeStartX: CGFloat = 0
-    private var swipeTransitioning = false
-
-    @objc private func handleSwipe(_ gesture: NSPanGestureRecognizer) {
-        guard tabs.count > 1 else { return }
-
-        let translation = gesture.translation(in: window?.contentView)
-        let velocity = gesture.velocity(in: window?.contentView)
-        let threshold: CGFloat = 100
-
-        switch gesture.state {
-        case .began:
-            swipeStartX = 0
-            swipeTransitioning = false
-
-        case .changed:
-            let dx = translation.x
-            // Animate the current tab sliding
-            if let currentSplit = currentTab?.splitView {
-                let progress = min(1.0, max(-1.0, dx / (contentContainerView.bounds.width * 0.5)))
-                currentSplit.layer?.transform = CATransform3DMakeTranslation(dx, 0, 0)
-                currentSplit.layer?.opacity = Float(1.0 - abs(progress) * 0.3)
-            }
-
-        case .ended, .cancelled:
-            let dx = translation.x
-            if abs(dx) > threshold || abs(velocity.x) > 500 {
-                if dx > 0 {
-                    selectTab(at: max(0, currentTabIndex - 1), animated: true)
-                } else {
-                    selectTab(at: min(tabs.count - 1, currentTabIndex + 1), animated: true)
-                }
-            } else {
-                // Snap back
-                if let currentSplit = currentTab?.splitView {
-                    NSAnimationContext.runAnimationGroup { context in
-                        context.duration = 0.2
-                        context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                        currentSplit.animator().layer?.transform = CATransform3DIdentity
-                        currentSplit.animator().layer?.opacity = 1.0
-                    }
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermSwipePrevTab, object: nil, queue: .main
+            ) { [weak self] _ in
+                guard let self else { return }
+                if self.currentTabIndex > 0 {
+                    self.selectTab(at: self.currentTabIndex - 1)
                 }
             }
-
-        default:
-            break
-        }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermSwipeNextTab, object: nil, queue: .main
+            ) { [weak self] _ in
+                guard let self else { return }
+                if self.currentTabIndex < self.tabs.count - 1 {
+                    self.selectTab(at: self.currentTabIndex + 1)
+                }
+            }
+        )
     }
 
     // MARK: - Tab Management

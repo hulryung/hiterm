@@ -14,12 +14,12 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     private var trackingArea: NSTrackingArea?
     private var markedText = NSMutableAttributedString()
 
-
     init(ghosttyApp: GhosttyApp, frame: NSRect = NSRect(x: 0, y: 0, width: 800, height: 600)) {
         self.ghosttyApp = ghosttyApp
         super.init(frame: frame)
         wantsLayer = true
         layer?.isOpaque = true
+        allowedTouchTypes = [.indirect]  // Enable trackpad touch events
 
         NotificationCenter.default.addObserver(
             self,
@@ -62,7 +62,7 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     private func updateSurfaceSize() {
         guard let surface else { return }
         let scaleFactor = window?.backingScaleFactor ?? 2.0
-        // Tell libghostty to render for our full frame (which is taller than the clip).
+        // Tell libghostty the surface dimensions in backing pixels.
         ghostty_surface_set_size(
             surface,
             UInt32(bounds.width * scaleFactor),
@@ -430,6 +430,54 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         }
         mods |= (momentum << 1)
         ghostty_surface_mouse_scroll(surface, x, y, mods)
+    }
+
+    // MARK: - Two-Finger Swipe Tab Switching (via touch events)
+
+    private var swipeTouchStartX: CGFloat?
+    private var swipeTriggered = false
+
+    override func touchesBegan(with event: NSEvent) {
+        let touches = event.touches(matching: .touching, in: self)
+        if touches.count == 2 {
+            // Record starting X position (average of 2 fingers).
+            let xs = touches.map { $0.normalizedPosition.x }
+            swipeTouchStartX = xs.reduce(0, +) / CGFloat(xs.count)
+            swipeTriggered = false
+        }
+        super.touchesBegan(with: event)
+    }
+
+    override func touchesMoved(with event: NSEvent) {
+        let touches = event.touches(matching: .touching, in: self)
+        if touches.count == 2, let startX = swipeTouchStartX, !swipeTriggered {
+            let xs = touches.map { $0.normalizedPosition.x }
+            let currentX = xs.reduce(0, +) / CGFloat(xs.count)
+            let delta = currentX - startX
+
+            // normalizedPosition is 0..1; threshold ~0.15 = decent swipe distance.
+            let threshold: CGFloat = 0.15
+            if delta > threshold {
+                swipeTriggered = true
+                NotificationCenter.default.post(name: .hitermSwipePrevTab, object: nil)
+            } else if delta < -threshold {
+                swipeTriggered = true
+                NotificationCenter.default.post(name: .hitermSwipeNextTab, object: nil)
+            }
+        }
+        super.touchesMoved(with: event)
+    }
+
+    override func touchesEnded(with event: NSEvent) {
+        swipeTouchStartX = nil
+        swipeTriggered = false
+        super.touchesEnded(with: event)
+    }
+
+    override func touchesCancelled(with event: NSEvent) {
+        swipeTouchStartX = nil
+        swipeTriggered = false
+        super.touchesCancelled(with: event)
     }
 
     private func sendMousePos(event: NSEvent) {

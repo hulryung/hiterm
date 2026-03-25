@@ -237,4 +237,6 @@ extension Notification.Name {
     static let hitermSetTitle = Notification.Name("hitermSetTitle")
     static let hitermMouseShape = Notification.Name("hitermMouseShape")
     static let hitermCloseSurface = Notification.Name("hitermCloseSurface")
+    static let hitermSwipePrevTab = Notification.Name("hitermSwipePrevTab")
+    static let hitermSwipeNextTab = Notification.Name("hitermSwipeNextTab")
 }
