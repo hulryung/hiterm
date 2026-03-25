@@ -14,6 +14,13 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     private var trackingArea: NSTrackingArea?
     private var markedText = NSMutableAttributedString()
 
+    // MARK: - Smooth Scroll State
+    private var smoothScrollOffsetY: CGFloat = 0.0
+    private var isScrolling: Bool = false
+    private var snapDisplayLink: CVDisplayLink?
+    private var snapStartTime: CFTimeInterval = 0
+    private var snapStartOffset: CGFloat = 0
+
     init(ghosttyApp: GhosttyApp, frame: NSRect = NSRect(x: 0, y: 0, width: 800, height: 600)) {
         self.ghosttyApp = ghosttyApp
         super.init(frame: frame)
@@ -33,6 +40,7 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     }
 
     deinit {
+        cancelSnapAnimation()
         NotificationCenter.default.removeObserver(self)
         if let surface {
             ghostty_surface_free(surface)
@@ -48,6 +56,7 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
 
     override func layout() {
         super.layout()
+        cancelSmoothScroll()
         tryCreateSurface()
 
         if let surface {
@@ -401,33 +410,170 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     override func scrollWheel(with event: NSEvent) {
         guard let surface else { return }
 
+        // When terminal app captures mouse (vim, less), bypass smooth scrolling.
+        if ghostty_surface_mouse_captured(surface) {
+            forwardScrollToGhostty(event)
+            return
+        }
+
+        if event.hasPreciseScrollingDeltas {
+            handlePreciseScroll(event)
+        } else {
+            cancelSmoothScroll()
+            forwardScrollToGhostty(event)
+        }
+    }
+
+    // MARK: - Smooth Scrolling
+
+    private var cellHeightPt: CGFloat {
+        guard let surface else { return 16.0 }
+        let size = ghostty_surface_size(surface)
+        let scale = window?.backingScaleFactor ?? 2.0
+        return CGFloat(size.cell_height_px) / scale
+    }
+
+    private func forwardScrollToGhostty(_ event: NSEvent) {
+        guard let surface else { return }
         var x = event.scrollingDeltaX
         var y = event.scrollingDeltaY
-
         if event.hasPreciseScrollingDeltas {
             x *= 2
             y *= 2
         }
+        ghostty_surface_mouse_scroll(surface, x, y, scrollModsFromEvent(event))
+    }
 
-        // Build scroll mods: precision bit (bit 0) + momentum phase (bits 1-3)
-        var scrollMods: Int32 = 0
-        if event.hasPreciseScrollingDeltas {
-            scrollMods |= 1 // precision flag
-        }
-
-        let momentumPhase: Int32
+    private func scrollModsFromEvent(_ event: NSEvent) -> Int32 {
+        var mods: Int32 = 0
+        if event.hasPreciseScrollingDeltas { mods |= 1 }
+        let momentum: Int32
         switch event.momentumPhase {
-        case .began: momentumPhase = 1
-        case .stationary: momentumPhase = 2
-        case .changed: momentumPhase = 3
-        case .ended: momentumPhase = 4
-        case .cancelled: momentumPhase = 5
-        case .mayBegin: momentumPhase = 6
-        default: momentumPhase = 0
+        case .began: momentum = 1
+        case .stationary: momentum = 2
+        case .changed: momentum = 3
+        case .ended: momentum = 4
+        case .cancelled: momentum = 5
+        case .mayBegin: momentum = 6
+        default: momentum = 0
         }
-        scrollMods |= (momentumPhase << 1)
+        mods |= (momentum << 1)
+        return mods
+    }
 
-        ghostty_surface_mouse_scroll(surface, x, y, scrollMods)
+    private func handlePreciseScroll(_ event: NSEvent) {
+        guard let surface else { return }
+        let cellHeight = cellHeightPt
+        guard cellHeight > 0 else { return }
+
+        cancelSnapAnimation()
+
+        if event.phase == .began || event.phase == .changed {
+            isScrolling = true
+        }
+
+        // Accumulate pixel offset.
+        smoothScrollOffsetY += event.scrollingDeltaY
+
+        // Forward horizontal component directly.
+        if abs(event.scrollingDeltaX) > 0 {
+            ghostty_surface_mouse_scroll(surface, event.scrollingDeltaX * 2, 0, scrollModsFromEvent(event))
+        }
+
+        // Consume full cell-height increments and forward to libghostty.
+        let mods = scrollModsFromEvent(event)
+        while abs(smoothScrollOffsetY) >= cellHeight {
+            let direction: Double = smoothScrollOffsetY > 0 ? 1.0 : -1.0
+            // Send one cell height worth of scroll (with 2x precise scaling).
+            ghostty_surface_mouse_scroll(surface, 0, direction * Double(cellHeight) * 2, mods)
+            smoothScrollOffsetY -= direction * cellHeight
+        }
+
+        applySmoothScrollTransform()
+
+        // Detect scroll end.
+        if event.phase == .ended || event.phase == .cancelled {
+            isScrolling = false
+            if event.momentumPhase == [] {
+                beginSnapAnimation()
+            }
+        }
+        if event.momentumPhase == .ended || event.momentumPhase == .cancelled {
+            isScrolling = false
+            beginSnapAnimation()
+        }
+    }
+
+    private func applySmoothScrollTransform() {
+        if abs(smoothScrollOffsetY) < 0.5 {
+            layer?.sublayerTransform = CATransform3DIdentity
+        } else {
+            layer?.sublayerTransform = CATransform3DMakeTranslation(0, smoothScrollOffsetY, 0)
+        }
+    }
+
+    private func beginSnapAnimation() {
+        guard abs(smoothScrollOffsetY) > 0.5 else {
+            smoothScrollOffsetY = 0
+            layer?.sublayerTransform = CATransform3DIdentity
+            return
+        }
+
+        snapStartOffset = smoothScrollOffsetY
+        snapStartTime = CACurrentMediaTime()
+
+        var dl: CVDisplayLink?
+        CVDisplayLinkCreateWithActiveCGDisplays(&dl)
+        guard let dl else {
+            finishSnapAnimation()
+            return
+        }
+        snapDisplayLink = dl
+
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        CVDisplayLinkSetOutputCallback(dl, { (_, _, _, _, _, ctx) -> CVReturn in
+            guard let ctx else { return kCVReturnSuccess }
+            let view = Unmanaged<TerminalSurfaceView>.fromOpaque(ctx).takeUnretainedValue()
+            DispatchQueue.main.async { view.snapAnimationTick() }
+            return kCVReturnSuccess
+        }, selfPtr)
+
+        CVDisplayLinkStart(dl)
+    }
+
+    private func snapAnimationTick() {
+        let elapsed = CACurrentMediaTime() - snapStartTime
+        let duration: CFTimeInterval = 0.15
+
+        if elapsed >= duration || isScrolling {
+            finishSnapAnimation()
+            return
+        }
+
+        // Ease-out cubic: 1 - (1 - t)^3
+        let t = elapsed / duration
+        let eased = 1.0 - pow(1.0 - t, 3)
+        smoothScrollOffsetY = snapStartOffset * CGFloat(1.0 - eased)
+        applySmoothScrollTransform()
+    }
+
+    private func finishSnapAnimation() {
+        cancelSnapAnimation()
+        smoothScrollOffsetY = 0
+        layer?.sublayerTransform = CATransform3DIdentity
+    }
+
+    private func cancelSnapAnimation() {
+        if let dl = snapDisplayLink {
+            CVDisplayLinkStop(dl)
+            snapDisplayLink = nil
+        }
+    }
+
+    private func cancelSmoothScroll() {
+        cancelSnapAnimation()
+        smoothScrollOffsetY = 0
+        layer?.sublayerTransform = CATransform3DIdentity
     }
 
     private func sendMousePos(event: NSEvent) {
