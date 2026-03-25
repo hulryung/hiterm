@@ -12,6 +12,7 @@ I wanted a terminal emulator that:
 - **Treats tabs as desktops** — entering fullscreen should send each tab to its own macOS Space, navigable with three-finger swipe.
 - **Supports two-finger swipe** for tab switching, like Safari.
 - **Splits panes** without friction.
+- **Copies wrapped lines correctly** — a single long line that wraps across multiple rows should copy as one line, not multiple lines with inserted newlines.
 
 No existing terminal did all of these the way I wanted, so I'm building one.
 
@@ -61,6 +62,7 @@ When entering fullscreen, hiterm detaches each tab into a separate `NSWindow` wi
 - [ ] Tabs with custom tab bar
 - [ ] Horizontal / vertical split panes
 - [ ] Two-finger swipe tab switching
+- [ ] Semantic line copy (wrapped lines copy as a single line)
 - [ ] Fullscreen: each tab becomes its own macOS Space
 
 ### Planned

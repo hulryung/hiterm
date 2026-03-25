@@ -58,7 +58,14 @@ It aims to provide iTerm2-level functionality with smooth scrolling and a modern
 - Commit tab switch when threshold is exceeded; snap back otherwise
 - UX identical to Safari tab swiping
 
-### 6. Fullscreen Tabs as Separate Desktops
+### 6. Semantic Line Copy
+
+- When a long line wraps across multiple visual rows in the terminal, copying should grab the single logical line, not multiple visual lines with embedded newlines
+- Standard terminals insert line breaks at the wrap boundary, producing broken output when pasted
+- hiterm should detect soft-wrapped lines and join them on copy so the clipboard contains the original single line
+- This applies to both mouse selection copy and keyboard selection copy
+
+### 7. Fullscreen Tabs as Separate Desktops
 
 - When entering fullscreen, each tab becomes an independent macOS Space
 - Set NSWindow.collectionBehavior to .fullScreenPrimary
@@ -68,18 +75,18 @@ It aims to provide iTerm2-level functionality with smooth scrolling and a modern
 
 ## Phase 2 (Future)
 
-### 7. Session Management
+### 8. Session Management
 
 - Abstract session types: local shell, SSH, serial
 - Save and load session profiles
 
-### 8. SSH Connections
+### 9. SSH Connections
 
 - SSH connection management (save host/port/user/key)
 - Auto-reconnect
 - Port forwarding
 
-### 9. Serial Connections
+### 10. Serial Connections
 
 - Serial port connections
 - Configuration: baud rate, parity, stop bits, flow control
