@@ -249,6 +249,13 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
     }
 
     @objc func closeTab(_ sender: Any?) {
+        // If the current tab is split, close only the focused pane.
+        if let splitView = currentTab?.splitView,
+           splitView.isSplit,
+           let focused = splitView.focusedSurface {
+            ghostty_surface_request_close(focused.surface!)
+            return
+        }
         closeCurrentTab()
     }
 

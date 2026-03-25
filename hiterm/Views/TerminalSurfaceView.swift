@@ -128,8 +128,23 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
 
     override func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
-        if result { surface.map { ghostty_surface_set_focus($0, true) } }
+        if result {
+            surface.map { ghostty_surface_set_focus($0, true) }
+            // Notify parent SplitView that this surface is now focused.
+            if let splitView = findParentSplitView() {
+                splitView.focusedSurface = self
+            }
+        }
         return result
+    }
+
+    private func findParentSplitView() -> TerminalSplitView? {
+        var view = superview
+        while let v = view {
+            if let split = v as? TerminalSplitView { return split }
+            view = v.superview
+        }
+        return nil
     }
 
     override func resignFirstResponder() -> Bool {

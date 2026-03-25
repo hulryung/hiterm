@@ -42,6 +42,11 @@ class TerminalSplitView: NSView {
 
     var onSurfaceClosed: ((TerminalSurfaceView) -> Void)?
 
+    var isSplit: Bool {
+        if case .split = rootNode { return true }
+        return false
+    }
+
     init(ghosttyApp: GhosttyApp, frame: NSRect = NSRect(x: 0, y: 0, width: 800, height: 600)) {
         self.ghosttyApp = ghosttyApp
         let surface = TerminalSurfaceView(ghosttyApp: ghosttyApp, frame: frame)
@@ -104,10 +109,31 @@ class TerminalSplitView: NSView {
 
         rootNode = replaceParentSplit(in: rootNode, removing: surface, replacingWith: sibling)
         surface.removeFromSuperview()
+
+        // Remove all dividers and recreate for current split state.
+        dividerViews.forEach { $0.removeFromSuperview() }
+        dividerViews.removeAll()
+        rebuildDividers(rootNode)
+
         layoutSplits()
 
         if let firstLeaf = findFirstLeaf(in: rootNode) {
             focusedSurface = firstLeaf
+        }
+    }
+
+    private func rebuildDividers(_ node: SplitNode) {
+        if case .split(let container) = node {
+            let divider = DividerView(direction: container.direction)
+            divider.onDrag = { [weak self, weak container] ratio in
+                guard let self, let container else { return }
+                container.ratio = max(0.1, min(0.9, ratio))
+                self.layoutSplits()
+            }
+            dividerViews.append(divider)
+            addSubview(divider)
+            rebuildDividers(container.first)
+            rebuildDividers(container.second)
         }
     }
 
