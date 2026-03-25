@@ -12,7 +12,7 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     var onClosed: (() -> Void)?
 
     private var trackingArea: NSTrackingArea?
-    private var markedText: String = ""
+    private var markedText = NSMutableAttributedString()
 
     init(ghosttyApp: GhosttyApp, frame: NSRect = NSRect(x: 0, y: 0, width: 800, height: 600)) {
         self.ghosttyApp = ghosttyApp
@@ -130,111 +130,195 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
 
     // MARK: - Keyboard Input
 
-    /// Tracks whether insertText was called during interpretKeyEvents.
+    /// Non-nil when inside keyDown; collects text from insertText during interpretKeyEvents.
     private var keyTextAccumulator: [String]?
 
     override func keyDown(with event: NSEvent) {
-        guard let surface else { return }
+        guard let surface else {
+            interpretKeyEvents([event])
+            return
+        }
 
-        // Use interpretKeyEvents for IME (Korean, Japanese, etc.)
-        // It will call insertText or doCommandBySelector as needed.
+        let action = event.isARepeat ? GHOSTTY_ACTION_REPEAT : GHOSTTY_ACTION_PRESS
+        let markedTextBefore = markedText.length > 0
+
+        // Begin accumulating text from interpretKeyEvents (IME).
         keyTextAccumulator = []
+        defer { keyTextAccumulator = nil }
+
         interpretKeyEvents([event])
-        let texts = keyTextAccumulator
-        keyTextAccumulator = nil
 
-        // Build key event for libghostty
-        let mods = Self.ghosttyMods(from: event.modifierFlags)
-        var keyEvent = ghostty_input_key_s()
-        keyEvent.action = GHOSTTY_ACTION_PRESS
-        keyEvent.mods = mods
-        keyEvent.keycode = UInt32(event.keyCode)
-        keyEvent.composing = hasMarkedText()
+        // Sync preedit (composing) state to libghostty after IME processing.
+        syncPreedit(clearIfNeeded: markedTextBefore)
 
-        if let texts, !texts.isEmpty {
-            // IME produced text — send each piece
-            for text in texts {
-                text.withCString { ptr in
-                    keyEvent.text = ptr
-                    ghostty_surface_key(surface, keyEvent)
-                }
+        if let list = keyTextAccumulator, !list.isEmpty {
+            // IME produced composed text — send each piece via ghostty_surface_key.
+            for text in list {
+                keyAction(action, event: event, text: text, composing: false)
             }
-        } else if !hasMarkedText() {
-            // No IME text — send raw key with characters
-            if let chars = event.characters, !chars.isEmpty {
-                chars.withCString { ptr in
-                    keyEvent.text = ptr
-                    ghostty_surface_key(surface, keyEvent)
-                }
-            } else {
-                keyEvent.text = nil
-                ghostty_surface_key(surface, keyEvent)
-            }
+        } else {
+            // No composed text — send raw key event.
+            // composing=true if we have preedit or just cleared it.
+            let composing = markedText.length > 0 || markedTextBefore
+            let text = ghosttyCharacters(from: event)
+            keyAction(action, event: event, text: text, composing: composing)
         }
     }
 
     override func keyUp(with event: NSEvent) {
         guard let surface else { return }
-        let mods = Self.ghosttyMods(from: event.modifierFlags)
         var keyEvent = ghostty_input_key_s()
         keyEvent.action = GHOSTTY_ACTION_RELEASE
-        keyEvent.mods = mods
+        keyEvent.mods = Self.ghosttyMods(from: event.modifierFlags)
         keyEvent.keycode = UInt32(event.keyCode)
         keyEvent.text = nil
         keyEvent.composing = false
+        keyEvent.consumed_mods = GHOSTTY_MODS_NONE
+        keyEvent.unshifted_codepoint = 0
         ghostty_surface_key(surface, keyEvent)
     }
 
     override func flagsChanged(with event: NSEvent) {
-        // Modifier keys changed - libghostty handles this via key events
+        // Modifier keys changed — libghostty handles this via key events.
     }
 
     override func doCommand(by selector: Selector) {
         // Suppress NSBeep for unhandled selectors (e.g., insertNewline: for Enter).
-        // The key event is handled by ghostty_surface_key directly.
+    }
+
+    /// Build and send a key event to libghostty.
+    private func keyAction(
+        _ action: ghostty_input_action_e,
+        event: NSEvent,
+        text: String?,
+        composing: Bool
+    ) {
+        guard let surface else { return }
+
+        var keyEvent = ghostty_input_key_s()
+        keyEvent.action = action
+        keyEvent.mods = Self.ghosttyMods(from: event.modifierFlags)
+        keyEvent.keycode = UInt32(event.keyCode)
+        keyEvent.composing = composing
+
+        // consumed_mods: assume shift/option contributed to text, ctrl/cmd did not.
+        keyEvent.consumed_mods = Self.ghosttyMods(
+            from: event.modifierFlags.subtracting([.control, .command])
+        )
+
+        // unshifted_codepoint: codepoint with no modifiers applied.
+        keyEvent.unshifted_codepoint = 0
+        if event.type == .keyDown || event.type == .keyUp {
+            if let chars = event.characters(byApplyingModifiers: []),
+               let codepoint = chars.unicodeScalars.first {
+                keyEvent.unshifted_codepoint = codepoint.value
+            }
+        }
+
+        // Only embed text if it's a printable character (>= 0x20).
+        if let text, !text.isEmpty,
+           let first = text.utf8.first, first >= 0x20 {
+            text.withCString { ptr in
+                keyEvent.text = ptr
+                ghostty_surface_key(surface, keyEvent)
+            }
+        } else {
+            keyEvent.text = nil
+            ghostty_surface_key(surface, keyEvent)
+        }
+    }
+
+    /// Extract characters suitable for libghostty from an NSEvent.
+    private func ghosttyCharacters(from event: NSEvent) -> String? {
+        guard let characters = event.characters else { return nil }
+        if characters.count == 1, let scalar = characters.unicodeScalars.first {
+            // Control characters: strip control modifier and re-derive.
+            if scalar.value < 0x20 {
+                return event.characters(byApplyingModifiers: event.modifierFlags.subtracting(.control))
+            }
+            // Function keys (PUA range): don't send.
+            if scalar.value >= 0xF700, scalar.value <= 0xF8FF {
+                return nil
+            }
+        }
+        return characters
+    }
+
+    /// Sync preedit (composing) state to libghostty.
+    private func syncPreedit(clearIfNeeded: Bool = true) {
+        guard let surface else { return }
+        if markedText.length > 0 {
+            let str = markedText.string
+            let len = str.utf8CString.count
+            if len > 0 {
+                str.withCString { ptr in
+                    ghostty_surface_preedit(surface, ptr, UInt(len - 1))
+                }
+            }
+        } else if clearIfNeeded {
+            ghostty_surface_preedit(surface, nil, 0)
+        }
     }
 
     // MARK: - NSTextInputClient
 
     func insertText(_ string: Any, replacementRange: NSRange) {
-        guard let str = string as? String else { return }
+        var chars = ""
+        switch string {
+        case let v as NSAttributedString: chars = v.string
+        case let v as String: chars = v
+        default: return
+        }
 
-        // If called during interpretKeyEvents, accumulate text for keyDown to handle.
+        // Composition is done — clear preedit.
+        unmarkText()
+
+        // If inside keyDown, accumulate for later dispatch.
         if keyTextAccumulator != nil {
-            keyTextAccumulator?.append(str)
+            keyTextAccumulator?.append(chars)
             return
         }
 
-        // Called outside interpretKeyEvents (e.g., paste) — send directly.
+        // Outside keyDown (e.g., paste) — send directly.
         guard let surface else { return }
-        str.withCString { ptr in
-            ghostty_surface_text(surface, ptr, UInt(str.utf8.count))
-        }
-    }
-
-    func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
-        guard let surface else { return }
-        if let str = string as? String {
-            markedText = str
-            str.withCString { ptr in
-                ghostty_surface_preedit(surface, ptr, UInt(str.utf8.count))
+        let len = chars.utf8CString.count
+        if len > 0 {
+            chars.withCString { ptr in
+                ghostty_surface_text(surface, ptr, UInt(len - 1))
             }
         }
     }
 
+    func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
+        switch string {
+        case let v as NSAttributedString:
+            markedText = NSMutableAttributedString(attributedString: v)
+        case let v as String:
+            markedText = NSMutableAttributedString(string: v)
+        default:
+            return
+        }
+
+        // If not inside keyDown, sync preedit immediately (e.g., keyboard layout change).
+        if keyTextAccumulator == nil {
+            syncPreedit()
+        }
+    }
+
     func unmarkText() {
-        guard let surface else { return }
-        markedText = ""
-        ghostty_surface_preedit(surface, nil, 0)
+        if markedText.length > 0 {
+            markedText.mutableString.setString("")
+            syncPreedit()
+        }
     }
 
     func hasMarkedText() -> Bool {
-        return !markedText.isEmpty
+        return markedText.length > 0
     }
 
     func markedRange() -> NSRange {
-        if markedText.isEmpty { return NSRange(location: NSNotFound, length: 0) }
-        return NSRange(location: 0, length: markedText.utf16.count)
+        if markedText.length == 0 { return NSRange(location: NSNotFound, length: 0) }
+        return NSRange(location: 0, length: markedText.length)
     }
 
     func selectedRange() -> NSRange {
