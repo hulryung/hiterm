@@ -16,10 +16,13 @@ echo "Building libghostty from $GHOSTTY_SRC ..."
 cd "$GHOSTTY_SRC"
 zig build -Dapp-runtime=none -Doptimize=ReleaseFast -Dsentry=false -Dtarget=aarch64-macos
 
-# Find the arm64 fat library
-FAT_LIB=$(find .zig-cache -name "libghostty-fat.a" -newer build.zig 2>/dev/null | while read f; do
-    if lipo -info "$f" 2>/dev/null | grep -q arm64; then echo "$f"; fi
-done | head -1)
+# Find the most recent arm64 fat library (sort by modification time, newest first)
+FAT_LIB=$(find .zig-cache -name "libghostty-fat.a" -newer build.zig -print0 2>/dev/null \
+    | xargs -0 stat -f '%m %N' 2>/dev/null \
+    | sort -rn \
+    | while read _ts path; do
+        if lipo -info "$path" 2>/dev/null | grep -q arm64; then echo "$path"; break; fi
+    done)
 
 if [ -z "$FAT_LIB" ]; then
     echo "Error: Could not find arm64 libghostty-fat.a"

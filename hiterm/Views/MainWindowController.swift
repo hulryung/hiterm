@@ -272,38 +272,20 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
         }
     }
 
-    // MARK: - Fullscreen: Tabs → Separate Spaces
+    // MARK: - Fullscreen
 
     func windowWillEnterFullScreen(_ notification: Notification) {
-        // Hide custom tab bar in fullscreen (each tab becomes its own space)
         tabBarView.isHidden = true
     }
 
     func windowDidEnterFullScreen(_ notification: Notification) {
-        // In full screen, create separate windows for each tab
-        // so macOS creates separate Spaces for each
-        guard tabs.count > 1 else { return }
-
-        for (i, tab) in tabs.enumerated() where i != currentTabIndex {
-            let auxWindow = NSWindow(
-                contentRect: window?.frame ?? .zero,
-                styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
-                backing: .buffered,
-                defer: false
-            )
-            auxWindow.collectionBehavior = [.fullScreenAuxiliary, .moveToActiveSpace]
-            auxWindow.contentView = tab.splitView
-            auxWindow.title = tab.title
-            auxWindow.toggleFullScreen(nil)
-        }
     }
 
     func windowWillExitFullScreen(_ notification: Notification) {
-        tabBarView.isHidden = false
     }
 
     func windowDidExitFullScreen(_ notification: Notification) {
-        // Re-collect all tabs back into the main window
+        tabBarView.isHidden = false
         selectTab(at: currentTabIndex)
     }
 }
