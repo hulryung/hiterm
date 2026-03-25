@@ -50,6 +50,10 @@ class TerminalSplitView: NSView {
         addSubview(surface)
         surface.frame = bounds
         surface.autoresizingMask = [.width, .height]
+        surface.onClosed = { [weak self, weak surface] in
+            guard let self, let surface else { return }
+            self.handleSurfaceClosed(surface)
+        }
         self.focusedSurface = surface
     }
 
@@ -62,6 +66,10 @@ class TerminalSplitView: NSView {
     func split(direction: SplitContainer.Direction) {
         guard let focused = focusedSurface else { return }
         let newSurface = TerminalSurfaceView(ghosttyApp: ghosttyApp)
+        newSurface.onClosed = { [weak self, weak newSurface] in
+            guard let self, let newSurface else { return }
+            self.handleSurfaceClosed(newSurface)
+        }
 
         let container = SplitContainer(
             direction: direction,
@@ -82,6 +90,10 @@ class TerminalSplitView: NSView {
 
         layoutSplits()
         focusedSurface = newSurface
+    }
+
+    private func handleSurfaceClosed(_ surface: TerminalSurfaceView) {
+        removeSurface(surface)
     }
 
     func removeSurface(_ surface: TerminalSurfaceView) {

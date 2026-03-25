@@ -51,8 +51,14 @@ class GhosttyApp {
         }
         runtime.close_surface_cb = { ud, processAlive in
             guard let ud else { return }
-            let app = Unmanaged<GhosttyApp>.fromOpaque(ud).takeUnretainedValue()
-            app.closeSurface(userdata: ud, processAlive: processAlive)
+            // ud is the surface's userdata (TerminalSurfaceView pointer).
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .hitermCloseSurface,
+                    object: ud,
+                    userInfo: ["processAlive": processAlive]
+                )
+            }
         }
 
         self.app = ghostty_app_new(&runtime, cfg)
@@ -217,13 +223,6 @@ class GhosttyApp {
         pasteboard.setString(str, forType: .string)
     }
 
-    private func closeSurface(userdata: UnsafeMutableRawPointer, processAlive: Bool) {
-        NotificationCenter.default.post(
-            name: .hitermCloseSurface,
-            object: nil,
-            userInfo: ["processAlive": processAlive]
-        )
-    }
 }
 
 // MARK: - Notification Names

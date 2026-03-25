@@ -27,6 +27,12 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
             name: .hitermSetTitle,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleCloseSurface(_:)),
+            name: .hitermCloseSurface,
+            object: nil
+        )
     }
 
     required init?(coder: NSCoder) {
@@ -453,5 +459,13 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         if let title = notification.userInfo?["title"] as? String {
             self.title = title
         }
+    }
+
+    @objc private func handleCloseSurface(_ notification: Notification) {
+        // Check if this notification is for us (compare userdata pointer).
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        guard let notifPtr = notification.object as? UnsafeMutableRawPointer,
+              notifPtr == selfPtr else { return }
+        onClosed?()
     }
 }
