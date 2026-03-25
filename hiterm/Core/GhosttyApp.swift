@@ -12,6 +12,12 @@ class GhosttyApp {
         // Create and finalize config
         guard let cfg = ghostty_config_new() else { return }
         ghostty_config_load_default_files(cfg)
+
+        // Load hiterm-specific config (smooth scroll shader).
+        if let configPath = Bundle.main.path(forResource: "ghostty-config", ofType: nil) {
+            ghostty_config_load_file(cfg, configPath)
+        }
+
         ghostty_config_finalize(cfg)
         self.config = cfg
 

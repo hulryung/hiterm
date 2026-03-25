@@ -18,6 +18,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0FBB4EE1E20383112C0B9BFA /* ghostty-config */ = {isa = PBXFileReference; path = "ghostty-config"; sourceTree = "<group>"; };
 		2AD270D5A30C5FA4E374F025 /* TerminalSurfaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSurfaceView.swift; sourceTree = "<group>"; };
 		568369CBB2D9A41F66B37F7F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7AD5F995D29B9C2B0AFE0F82 /* GhosttyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyApp.swift; sourceTree = "<group>"; };
@@ -54,9 +55,18 @@
 				9769B7213206E6881B2C5A60 /* Assets.xcassets */,
 				FCA0FEDADB4DBF751C862818 /* App */,
 				2354ABB4D54E9DDEABA23A60 /* Core */,
+				93BE989E037607D14AC3A12D /* Resources */,
 				D97F848F70730C451A393676 /* Views */,
 			);
 			path = hiterm;
+			sourceTree = "<group>";
+		};
+		93BE989E037607D14AC3A12D /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				0FBB4EE1E20383112C0B9BFA /* ghostty-config */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		9B2B0F76F49BC237C52EBEDD /* Products */ = {
@@ -97,6 +107,7 @@
 			buildConfigurationList = 0B04A2A9D5027BD7320AD63C /* Build configuration list for PBXNativeTarget "hiterm" */;
 			buildPhases = (
 				0FCFAFC2337A375A433006A9 /* Sources */,
+				25ADB702AD17442FB6AF5346 /* Copy shader and config resources */,
 				F86B041787C739A1926A0C06 /* Resources */,
 			);
 			buildRules = (
@@ -150,6 +161,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		25ADB702AD17442FB6AF5346 /* Copy shader and config resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Copy shader and config resources";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cp -R \"${PROJECT_DIR}/shaders\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/shaders\"\ncp \"${PROJECT_DIR}/hiterm/Resources/ghostty-config\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		0FCFAFC2337A375A433006A9 /* Sources */ = {

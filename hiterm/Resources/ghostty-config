@@ -1,0 +1,2 @@
+custom-shader = shaders/smoothscroll.glsl
+custom-shader-animation = true

@@ -14,6 +14,7 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     private var trackingArea: NSTrackingArea?
     private var markedText = NSMutableAttributedString()
 
+
     init(ghosttyApp: GhosttyApp, frame: NSRect = NSRect(x: 0, y: 0, width: 800, height: 600)) {
         self.ghosttyApp = ghosttyApp
         super.init(frame: frame)
@@ -49,16 +50,19 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     override func layout() {
         super.layout()
         tryCreateSurface()
+        updateSurfaceSize()
+    }
 
-        if let surface {
-            let scaleFactor = window?.backingScaleFactor ?? 2.0
-            ghostty_surface_set_size(
-                surface,
-                UInt32(bounds.width * scaleFactor),
-                UInt32(bounds.height * scaleFactor)
-            )
-            ghostty_surface_set_content_scale(surface, scaleFactor, scaleFactor)
-        }
+    private func updateSurfaceSize() {
+        guard let surface else { return }
+        let scaleFactor = window?.backingScaleFactor ?? 2.0
+        // Tell libghostty to render for our full frame (which is taller than the clip).
+        ghostty_surface_set_size(
+            surface,
+            UInt32(bounds.width * scaleFactor),
+            UInt32(bounds.height * scaleFactor)
+        )
+        ghostty_surface_set_content_scale(surface, scaleFactor, scaleFactor)
     }
 
     private func tryCreateSurface() {
@@ -403,31 +407,23 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
 
         var x = event.scrollingDeltaX
         var y = event.scrollingDeltaY
-
         if event.hasPreciseScrollingDeltas {
-            x *= 2
-            y *= 2
+            x *= 2; y *= 2
         }
 
-        // Build scroll mods: precision bit (bit 0) + momentum phase (bits 1-3)
-        var scrollMods: Int32 = 0
-        if event.hasPreciseScrollingDeltas {
-            scrollMods |= 1 // precision flag
-        }
-
-        let momentumPhase: Int32
+        var mods: Int32 = event.hasPreciseScrollingDeltas ? 1 : 0
+        let momentum: Int32
         switch event.momentumPhase {
-        case .began: momentumPhase = 1
-        case .stationary: momentumPhase = 2
-        case .changed: momentumPhase = 3
-        case .ended: momentumPhase = 4
-        case .cancelled: momentumPhase = 5
-        case .mayBegin: momentumPhase = 6
-        default: momentumPhase = 0
+        case .began: momentum = 1
+        case .stationary: momentum = 2
+        case .changed: momentum = 3
+        case .ended: momentum = 4
+        case .cancelled: momentum = 5
+        case .mayBegin: momentum = 6
+        default: momentum = 0
         }
-        scrollMods |= (momentumPhase << 1)
-
-        ghostty_surface_mouse_scroll(surface, x, y, scrollMods)
+        mods |= (momentum << 1)
+        ghostty_surface_mouse_scroll(surface, x, y, mods)
     }
 
     private func sendMousePos(event: NSEvent) {
