@@ -130,26 +130,46 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
 
     // MARK: - Keyboard Input
 
+    /// Tracks whether insertText was called during interpretKeyEvents.
+    private var keyTextAccumulator: [String]?
+
     override func keyDown(with event: NSEvent) {
         guard let surface else { return }
-        interpretKeyEvents([event])
 
-        // If interpretKeyEvents didn't produce text, send the raw key event
+        // Use interpretKeyEvents for IME (Korean, Japanese, etc.)
+        // It will call insertText or doCommandBySelector as needed.
+        keyTextAccumulator = []
+        interpretKeyEvents([event])
+        let texts = keyTextAccumulator
+        keyTextAccumulator = nil
+
+        // Build key event for libghostty
         let mods = Self.ghosttyMods(from: event.modifierFlags)
         var keyEvent = ghostty_input_key_s()
         keyEvent.action = GHOSTTY_ACTION_PRESS
         keyEvent.mods = mods
         keyEvent.keycode = UInt32(event.keyCode)
-        keyEvent.composing = false
+        keyEvent.composing = hasMarkedText()
 
-        if let chars = event.characters, !chars.isEmpty {
-            chars.withCString { ptr in
-                keyEvent.text = ptr
+        if let texts, !texts.isEmpty {
+            // IME produced text — send each piece
+            for text in texts {
+                text.withCString { ptr in
+                    keyEvent.text = ptr
+                    ghostty_surface_key(surface, keyEvent)
+                }
+            }
+        } else if !hasMarkedText() {
+            // No IME text — send raw key with characters
+            if let chars = event.characters, !chars.isEmpty {
+                chars.withCString { ptr in
+                    keyEvent.text = ptr
+                    ghostty_surface_key(surface, keyEvent)
+                }
+            } else {
+                keyEvent.text = nil
                 ghostty_surface_key(surface, keyEvent)
             }
-        } else {
-            keyEvent.text = nil
-            ghostty_surface_key(surface, keyEvent)
         }
     }
 
@@ -169,11 +189,24 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         // Modifier keys changed - libghostty handles this via key events
     }
 
+    override func doCommand(by selector: Selector) {
+        // Suppress NSBeep for unhandled selectors (e.g., insertNewline: for Enter).
+        // The key event is handled by ghostty_surface_key directly.
+    }
+
     // MARK: - NSTextInputClient
 
     func insertText(_ string: Any, replacementRange: NSRange) {
-        guard let surface else { return }
         guard let str = string as? String else { return }
+
+        // If called during interpretKeyEvents, accumulate text for keyDown to handle.
+        if keyTextAccumulator != nil {
+            keyTextAccumulator?.append(str)
+            return
+        }
+
+        // Called outside interpretKeyEvents (e.g., paste) — send directly.
+        guard let surface else { return }
         str.withCString { ptr in
             ghostty_surface_text(surface, ptr, UInt(str.utf8.count))
         }
