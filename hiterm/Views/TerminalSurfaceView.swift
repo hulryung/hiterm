@@ -334,12 +334,25 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     }
 
     func firstRect(forCharacterRange range: NSRange, actualRange: NSRangePointer?) -> NSRect {
-        guard let surface else { return .zero }
+        guard let surface else {
+            return NSRect(x: frame.origin.x, y: frame.origin.y, width: 0, height: 0)
+        }
+
         var x: Double = 0, y: Double = 0, w: Double = 0, h: Double = 0
         ghostty_surface_ime_point(surface, &x, &y, &w, &h)
-        let point = convert(NSPoint(x: x, y: frame.height - y - h), to: nil)
-        let screenPoint = window?.convertPoint(toScreen: point) ?? point
-        return NSRect(x: screenPoint.x, y: screenPoint.y, width: w, height: h)
+
+        // ghostty_surface_ime_point returns point coordinates with top-left origin.
+        // Convert to AppKit bottom-left origin (matching Ghostty's implementation).
+        let viewRect = NSRect(
+            x: x,
+            y: frame.size.height - y,
+            width: w,
+            height: max(h, 1)
+        )
+
+        let winRect = convert(viewRect, to: nil)
+        guard let window else { return winRect }
+        return window.convertToScreen(winRect)
     }
 
     func characterIndex(for point: NSPoint) -> Int {
