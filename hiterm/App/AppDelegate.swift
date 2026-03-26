@@ -5,6 +5,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var ghosttyApp: GhosttyApp!
     private var windowControllers: [MainWindowController] = []
 
+    var ghosttyAppInstance: GhosttyApp? { ghosttyApp }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
 
@@ -13,6 +15,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             print("Failed to initialize Ghostty app")
             NSApp.terminate(nil)
             return
+        }
+
+        // Initialize settings manager and load defaults.
+        if let config = ghosttyApp.config {
+            SettingsManager.shared.loadInitialSettings(from: config)
         }
 
         setupMainMenu()

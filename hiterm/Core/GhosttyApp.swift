@@ -18,6 +18,12 @@ class GhosttyApp {
             ghostty_config_load_file(cfg, configPath)
         }
 
+        // Load user settings (from Settings UI).
+        let userConfig = SettingsManager.shared.userConfigPath
+        if FileManager.default.fileExists(atPath: userConfig) {
+            ghostty_config_load_file(cfg, userConfig)
+        }
+
         ghostty_config_finalize(cfg)
         self.config = cfg
 

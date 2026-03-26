@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct SettingsView: View {
     @State private var selectedTab: SettingsTab = .general
@@ -12,25 +13,18 @@ struct SettingsView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             GeneralSettingsView()
-                .tabItem {
-                    Label("General", systemImage: "gear")
-                }
+                .tabItem { Label("General", systemImage: "gear") }
                 .tag(SettingsTab.general)
 
             AppearanceSettingsView()
-                .tabItem {
-                    Label("Appearance", systemImage: "paintbrush")
-                }
+                .tabItem { Label("Appearance", systemImage: "paintbrush") }
                 .tag(SettingsTab.appearance)
 
             KeybindingsSettingsView()
-                .tabItem {
-                    Label("Keybindings", systemImage: "keyboard")
-                }
+                .tabItem { Label("Keybindings", systemImage: "keyboard") }
                 .tag(SettingsTab.keybindings)
         }
-        .frame(width: 480, height: 360)
-        .padding()
+        .frame(width: 560, height: 480)
     }
 }
 
@@ -44,26 +38,31 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section("Shell") {
-                TextField("Shell path:", text: $shell)
-                    .textFieldStyle(.roundedBorder)
+                LabeledContent("Path") {
+                    TextField("", text: $shell)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 240)
+                }
             }
 
             Section("Scrollback") {
-                HStack {
-                    Text("Lines:")
+                LabeledContent("Lines") {
                     TextField("", value: $scrollbackLines, format: .number)
                         .textFieldStyle(.roundedBorder)
-                        .frame(width: 80)
+                        .frame(width: 100)
                 }
             }
 
             Section("Cursor") {
-                Picker("Style:", selection: $cursorStyle) {
-                    Text("Block").tag("block")
-                    Text("Bar").tag("bar")
-                    Text("Underline").tag("underline")
+                LabeledContent("Style") {
+                    Picker("", selection: $cursorStyle) {
+                        Text("Block").tag("block")
+                        Text("Bar").tag("bar")
+                        Text("Underline").tag("underline")
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 240)
                 }
-                .pickerStyle(.segmented)
             }
         }
         .formStyle(.grouped)
@@ -78,35 +77,116 @@ struct AppearanceSettingsView: View {
     @AppStorage("theme") private var theme = "dark"
     @AppStorage("windowOpacity") private var windowOpacity = 1.0
 
+    @State private var monoFonts: [String] = []
+    @State private var themes: [String] = []
+
     var body: some View {
         Form {
             Section("Font") {
+                LabeledContent("Family") {
+                    SearchablePicker(
+                        selection: $fontFamily,
+                        items: monoFonts,
+                        placeholder: "Search fonts…"
+                    ) { font in
+                        HStack(spacing: 8) {
+                            Text("Ag")
+                                .font(.custom(font, size: 13))
+                                .frame(width: 28, alignment: .center)
+                                .foregroundColor(.secondary)
+                            Text(font).font(.system(size: 12))
+                        }
+                    }
+                    .frame(width: 280)
+                }
+
+                LabeledContent("Size") {
+                    HStack(spacing: 8) {
+                        TextField("", value: $fontSize, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 50)
+                        Stepper("", value: $fontSize, in: 8...36, step: 1)
+                            .labelsHidden()
+                        Text("pt")
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // Preview
                 HStack {
-                    TextField("Family:", text: $fontFamily)
-                        .textFieldStyle(.roundedBorder)
-                    Stepper("Size: \(Int(fontSize))pt", value: $fontSize, in: 8...36, step: 1)
+                    Spacer()
+                    Text("The quick brown fox jumps over the lazy dog")
+                        .font(.custom(fontFamily, size: fontSize))
+                        .padding(10)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.black.opacity(0.4))
+                        .foregroundColor(.white)
+                        .cornerRadius(6)
+                    Spacer()
                 }
             }
 
             Section("Theme") {
-                Picker("Color scheme:", selection: $theme) {
-                    Text("Dark").tag("dark")
-                    Text("Light").tag("light")
-                    Text("System").tag("system")
+                LabeledContent("Color theme") {
+                    SearchablePicker(
+                        selection: $theme,
+                        items: themes,
+                        placeholder: "Search themes…"
+                    ) { theme in
+                        Text(theme).font(.system(size: 12))
+                    }
+                    .frame(width: 280)
                 }
-                .pickerStyle(.segmented)
             }
 
             Section("Window") {
-                HStack {
-                    Text("Opacity:")
-                    Slider(value: $windowOpacity, in: 0.5...1.0, step: 0.05)
-                    Text("\(Int(windowOpacity * 100))%")
-                        .frame(width: 40)
+                LabeledContent("Opacity") {
+                    HStack(spacing: 8) {
+                        Slider(value: $windowOpacity, in: 0.3...1.0, step: 0.05)
+                            .frame(width: 180)
+                        Text("\(Int(windowOpacity * 100))%")
+                            .foregroundColor(.secondary)
+                            .frame(width: 36, alignment: .trailing)
+                    }
                 }
             }
         }
         .formStyle(.grouped)
+        .onAppear {
+            loadMonoFonts()
+            loadThemes()
+        }
+    }
+
+    private func loadMonoFonts() {
+        let manager = NSFontManager.shared
+        monoFonts = manager.availableFontFamilies.filter { family in
+            guard let font = NSFont(name: family, size: 13) else { return false }
+            return font.isFixedPitch
+                || family.localizedCaseInsensitiveContains("mono")
+                || family.localizedCaseInsensitiveContains("code")
+                || family.localizedCaseInsensitiveContains("consol")
+                || family.localizedCaseInsensitiveContains("courier")
+                || family.localizedCaseInsensitiveContains("menlo")
+                || family.localizedCaseInsensitiveContains("terminal")
+        }.sorted()
+    }
+
+    private func loadThemes() {
+        let searchPaths = [
+            NSHomeDirectory() + "/dev/ghostty-src/zig-out/share/ghostty/themes",
+            NSHomeDirectory() + "/.config/ghostty/themes",
+            "/usr/local/share/ghostty/themes",
+            "/opt/homebrew/share/ghostty/themes",
+        ]
+        for path in searchPaths {
+            if let files = try? FileManager.default.contentsOfDirectory(atPath: path) {
+                themes = files.sorted()
+                return
+            }
+        }
+        themes = ["Dracula", "Solarized Dark", "Solarized Light", "Monokai",
+                   "Nord", "Gruvbox Dark", "Gruvbox Light", "One Dark", "Tokyo Night"]
     }
 }
 
@@ -130,6 +210,7 @@ struct KeybindingsSettingsView: View {
             Section("Window") {
                 KeybindingRow(action: "New Window", shortcut: "Cmd + N")
                 KeybindingRow(action: "Toggle Fullscreen", shortcut: "Ctrl + Cmd + F")
+                KeybindingRow(action: "Settings", shortcut: "Cmd + ,")
             }
         }
         .formStyle(.grouped)
@@ -145,11 +226,104 @@ struct KeybindingRow: View {
             Text(action)
             Spacer()
             Text(shortcut)
+                .font(.system(size: 11, design: .monospaced))
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 8)
-                .padding(.vertical, 2)
-                .background(Color.secondary.opacity(0.15))
+                .padding(.vertical, 3)
+                .background(Color.secondary.opacity(0.12))
                 .cornerRadius(4)
+        }
+    }
+}
+
+// MARK: - Searchable Picker (reusable)
+
+struct SearchablePicker<RowContent: View>: View {
+    @Binding var selection: String
+    let items: [String]
+    let placeholder: String
+    let rowContent: (String) -> RowContent
+
+    @State private var searchText = ""
+    @State private var isExpanded = false
+
+    private var filteredItems: [String] {
+        if searchText.isEmpty { return items }
+        return items.filter { $0.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Selected value button
+            Button(action: { withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() } }) {
+                HStack {
+                    Text(selection)
+                        .font(.system(size: 12))
+                        .lineLimit(1)
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                VStack(spacing: 0) {
+                    // Search field
+                    TextField(placeholder, text: $searchText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                        .padding(6)
+
+                    Divider()
+
+                    // Scrollable list
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(filteredItems, id: \.self) { item in
+                                Button(action: {
+                                    selection = item
+                                    searchText = ""
+                                    withAnimation(.easeInOut(duration: 0.15)) { isExpanded = false }
+                                }) {
+                                    HStack {
+                                        rowContent(item)
+                                        Spacer()
+                                        if item == selection {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(.accentColor)
+                                        }
+                                    }
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .background(item == selection ? Color.accentColor.opacity(0.1) : Color.clear)
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 200)
+                }
+                .background(Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                .padding(.top, 2)
+            }
         }
     }
 }
