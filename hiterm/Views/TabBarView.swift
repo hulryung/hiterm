@@ -22,7 +22,7 @@ class TabBarView: NSView {
 
     private func setup() {
         wantsLayer = true
-        layer?.backgroundColor = NSColor(red: 0.12, green: 0.12, blue: 0.12, alpha: 1.0).cgColor
+        layer?.backgroundColor = NSColor(red: 0.15, green: 0.15, blue: 0.16, alpha: 1.0).cgColor
 
         stackView.orientation = .horizontal
         stackView.spacing = 1
@@ -104,12 +104,12 @@ class TabButton: NSView {
         wantsLayer = true
         layer?.cornerRadius = 6
         layer?.backgroundColor = isSelected
-            ? NSColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0).cgColor
-            : NSColor.clear.cgColor
+            ? NSColor(red: 0.25, green: 0.25, blue: 0.27, alpha: 1.0).cgColor
+            : NSColor(red: 0.18, green: 0.18, blue: 0.19, alpha: 1.0).cgColor
 
         titleLabel.stringValue = title
-        titleLabel.font = .systemFont(ofSize: 12)
-        titleLabel.textColor = isSelected ? .labelColor : .secondaryLabelColor
+        titleLabel.font = .systemFont(ofSize: 12, weight: isSelected ? .medium : .regular)
+        titleLabel.textColor = isSelected ? .white : NSColor(white: 0.55, alpha: 1.0)
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         addSubview(titleLabel)
@@ -159,14 +159,14 @@ class TabButton: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         if !isSelected {
-            layer?.backgroundColor = NSColor(red: 0.16, green: 0.16, blue: 0.16, alpha: 1.0).cgColor
+            layer?.backgroundColor = NSColor(red: 0.22, green: 0.22, blue: 0.23, alpha: 1.0).cgColor
         }
         closeButton.isHidden = false
     }
 
     override func mouseExited(with event: NSEvent) {
         if !isSelected {
-            layer?.backgroundColor = NSColor.clear.cgColor
+            layer?.backgroundColor = NSColor(red: 0.18, green: 0.18, blue: 0.19, alpha: 1.0).cgColor
         }
         closeButton.isHidden = !isSelected
     }
