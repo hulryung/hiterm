@@ -27,6 +27,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    @objc func openSettings(_ sender: Any?) {
+        SettingsWindowController.shared.showWindow(nil)
+    }
+
     @objc func newWindow(_ sender: Any?) {
         let wc = MainWindowController(ghosttyApp: ghosttyApp)
         windowControllers.append(wc)
@@ -46,6 +50,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: "About hiterm", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Settings…", action: #selector(openSettings(_:)), keyEquivalent: ",")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Quit hiterm", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appMenuItem.submenu = appMenu
