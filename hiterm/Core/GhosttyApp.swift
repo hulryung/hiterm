@@ -185,6 +185,90 @@ class GhosttyApp {
         case GHOSTTY_ACTION_CONFIG_CHANGE:
             return true
 
+        case GHOSTTY_ACTION_NEW_WINDOW:
+            NotificationCenter.default.post(name: .hitermNewWindow, object: nil)
+            return true
+
+        case GHOSTTY_ACTION_CLOSE_WINDOW:
+            NotificationCenter.default.post(name: .hitermCloseWindow, object: nil)
+            return true
+
+        case GHOSTTY_ACTION_QUIT:
+            NSApp.terminate(nil)
+            return true
+
+        case GHOSTTY_ACTION_EQUALIZE_SPLITS:
+            NotificationCenter.default.post(name: .hitermEqualizeSplits, object: nil)
+            return true
+
+        case GHOSTTY_ACTION_RESIZE_SPLIT:
+            let resize = action.action.resize_split
+            NotificationCenter.default.post(
+                name: .hitermResizeSplit,
+                object: nil,
+                userInfo: ["direction": resize.direction, "amount": resize.amount]
+            )
+            return true
+
+        case GHOSTTY_ACTION_TOGGLE_SPLIT_ZOOM:
+            NotificationCenter.default.post(name: .hitermToggleSplitZoom, object: nil)
+            return true
+
+        case GHOSTTY_ACTION_MOVE_TAB:
+            let amount = action.action.move_tab.amount
+            NotificationCenter.default.post(
+                name: .hitermMoveTab,
+                object: nil,
+                userInfo: ["amount": amount]
+            )
+            return true
+
+        case GHOSTTY_ACTION_RESET_WINDOW_SIZE:
+            NotificationCenter.default.post(name: .hitermResetWindowSize, object: nil)
+            return true
+
+        case GHOSTTY_ACTION_OPEN_URL:
+            if let urlPtr = action.action.open_url.url {
+                let len = action.action.open_url.len
+                let url = String(cString: urlPtr)
+                if let nsUrl = URL(string: url) {
+                    NSWorkspace.shared.open(nsUrl)
+                }
+            }
+            return true
+
+        case GHOSTTY_ACTION_RING_BELL:
+            NSSound.beep()
+            return true
+
+        case GHOSTTY_ACTION_TOGGLE_MAXIMIZE:
+            NSApp.keyWindow?.zoom(nil)
+            return true
+
+        case GHOSTTY_ACTION_SET_TAB_TITLE:
+            return true
+
+        case GHOSTTY_ACTION_DESKTOP_NOTIFICATION:
+            return true
+
+        case GHOSTTY_ACTION_SHOW_CHILD_EXITED:
+            return true
+
+        case GHOSTTY_ACTION_KEY_SEQUENCE:
+            return true
+
+        case GHOSTTY_ACTION_READONLY:
+            return true
+
+        case GHOSTTY_ACTION_COPY_TITLE_TO_CLIPBOARD:
+            return true
+
+        case GHOSTTY_ACTION_PROGRESS_REPORT:
+            return true
+
+        case GHOSTTY_ACTION_COMMAND_FINISHED:
+            return true
+
         default:
             return false
         }
@@ -239,4 +323,11 @@ extension Notification.Name {
     static let hitermCloseSurface = Notification.Name("hitermCloseSurface")
     static let hitermSwipePrevTab = Notification.Name("hitermSwipePrevTab")
     static let hitermSwipeNextTab = Notification.Name("hitermSwipeNextTab")
+    static let hitermNewWindow = Notification.Name("hitermNewWindow")
+    static let hitermCloseWindow = Notification.Name("hitermCloseWindow")
+    static let hitermEqualizeSplits = Notification.Name("hitermEqualizeSplits")
+    static let hitermResizeSplit = Notification.Name("hitermResizeSplit")
+    static let hitermToggleSplitZoom = Notification.Name("hitermToggleSplitZoom")
+    static let hitermMoveTab = Notification.Name("hitermMoveTab")
+    static let hitermResetWindowSize = Notification.Name("hitermResetWindowSize")
 }

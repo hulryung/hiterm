@@ -3,7 +3,7 @@ import GhosttyKit
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var ghosttyApp: GhosttyApp!
-    private var mainWindowController: MainWindowController?
+    private var windowControllers: [MainWindowController] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -17,13 +17,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         setupMainMenu()
 
-        mainWindowController = MainWindowController(ghosttyApp: ghosttyApp)
-        mainWindowController?.showWindow(nil)
+        let wc = MainWindowController(ghosttyApp: ghosttyApp)
+        windowControllers.append(wc)
+        wc.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
+    }
+
+    @objc func newWindow(_ sender: Any?) {
+        let wc = MainWindowController(ghosttyApp: ghosttyApp)
+        windowControllers.append(wc)
+        wc.showWindow(nil)
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -47,6 +54,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Shell menu
         let shellMenuItem = NSMenuItem()
         let shellMenu = NSMenu(title: "Shell")
+        shellMenu.addItem(withTitle: "New Window", action: #selector(newWindow(_:)), keyEquivalent: "n")
         shellMenu.addItem(withTitle: "New Tab", action: #selector(MainWindowController.newTab(_:)), keyEquivalent: "t")
         shellMenu.addItem(withTitle: "Close Tab", action: #selector(MainWindowController.closeTab(_:)), keyEquivalent: "w")
         shellMenu.addItem(.separator())

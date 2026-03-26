@@ -122,6 +122,89 @@ class TerminalSplitView: NSView {
         }
     }
 
+    func equalizeSplits() {
+        equalizeSplitsNode(rootNode)
+        layoutSplits()
+    }
+
+    private func equalizeSplitsNode(_ node: SplitNode) {
+        if case .split(let container) = node {
+            container.ratio = 0.5
+            equalizeSplitsNode(container.first)
+            equalizeSplitsNode(container.second)
+        }
+    }
+
+    func resizeFocusedSplit(direction: ghostty_action_resize_split_direction_e, amount: CGFloat) {
+        guard let focused = focusedSurface else { return }
+        rootNode = adjustRatio(in: rootNode, near: focused, direction: direction, amount: amount)
+        layoutSplits()
+    }
+
+    private func adjustRatio(in node: SplitNode, near surface: TerminalSurfaceView,
+                             direction: ghostty_action_resize_split_direction_e, amount: CGFloat) -> SplitNode {
+        guard case .split(let container) = node else { return node }
+        if containsSurface(surface, in: container.first) || containsSurface(surface, in: container.second) {
+            let delta: CGFloat
+            switch direction {
+            case GHOSTTY_RESIZE_SPLIT_RIGHT, GHOSTTY_RESIZE_SPLIT_DOWN:
+                delta = containsSurface(surface, in: container.first) ? amount : -amount
+            default:
+                delta = containsSurface(surface, in: container.first) ? -amount : amount
+            }
+            container.ratio = max(0.1, min(0.9, container.ratio + delta))
+            return .split(container)
+        }
+        container.first = adjustRatio(in: container.first, near: surface, direction: direction, amount: amount)
+        container.second = adjustRatio(in: container.second, near: surface, direction: direction, amount: amount)
+        return .split(container)
+    }
+
+    private var zoomedNode: SplitNode?
+    private var preZoomRootNode: SplitNode?
+
+    func toggleZoom() {
+        guard let focused = focusedSurface else { return }
+        if preZoomRootNode != nil {
+            // Unzoom: restore original tree.
+            rootNode = preZoomRootNode!
+            preZoomRootNode = nil
+            // Re-add all surfaces from tree.
+            addAllSurfaces(rootNode)
+            dividerViews.forEach { $0.removeFromSuperview() }
+            dividerViews.removeAll()
+            rebuildDividers(rootNode)
+            layoutSplits()
+            focusedSurface = focused
+        } else {
+            // Zoom: save tree, show only focused.
+            preZoomRootNode = rootNode
+            // Remove all views.
+            removeAllSurfaces(rootNode)
+            dividerViews.forEach { $0.removeFromSuperview() }
+            dividerViews.removeAll()
+            // Show only focused.
+            addSubview(focused)
+            focused.frame = bounds
+            focused.autoresizingMask = [.width, .height]
+        }
+    }
+
+    private func removeAllSurfaces(_ node: SplitNode) {
+        switch node {
+        case .leaf(let surface): surface.removeFromSuperview()
+        case .split(let c): removeAllSurfaces(c.first); removeAllSurfaces(c.second)
+        }
+    }
+
+    private func addAllSurfaces(_ node: SplitNode) {
+        switch node {
+        case .leaf(let surface):
+            if surface.superview == nil { addSubview(surface) }
+        case .split(let c): addAllSurfaces(c.first); addAllSurfaces(c.second)
+        }
+    }
+
     private func rebuildDividers(_ node: SplitNode) {
         if case .split(let container) = node {
             let divider = DividerView(direction: container.direction)

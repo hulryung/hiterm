@@ -34,7 +34,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
 
         // Enable full-screen with tabs as separate spaces
         window.collectionBehavior = [.fullScreenPrimary, .fullScreenAllowsTiling]
-        window.tabbingMode = .preferred
+        window.tabbingMode = .disallowed
 
         super.init(window: window)
         window.delegate = self
@@ -139,6 +139,60 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
                 if self.currentTabIndex < self.tabs.count - 1 {
                     self.selectTab(at: self.currentTabIndex + 1)
                 }
+            }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermNewWindow, object: nil, queue: .main
+            ) { _ in
+                if let delegate = NSApp.delegate as? AppDelegate {
+                    delegate.newWindow(nil)
+                }
+            }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermCloseWindow, object: nil, queue: .main
+            ) { [weak self] _ in self?.window?.close() }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermEqualizeSplits, object: nil, queue: .main
+            ) { [weak self] _ in self?.currentTab?.splitView.equalizeSplits() }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermResizeSplit, object: nil, queue: .main
+            ) { [weak self] notif in
+                guard let direction = notif.userInfo?["direction"] as? ghostty_action_resize_split_direction_e,
+                      let amount = notif.userInfo?["amount"] as? UInt16 else { return }
+                self?.currentTab?.splitView.resizeFocusedSplit(direction: direction, amount: CGFloat(amount) / 100.0)
+            }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermToggleSplitZoom, object: nil, queue: .main
+            ) { [weak self] _ in self?.currentTab?.splitView.toggleZoom() }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermMoveTab, object: nil, queue: .main
+            ) { [weak self] notif in
+                guard let self, let amount = notif.userInfo?["amount"] as? Int else { return }
+                let newIndex = max(0, min(self.tabs.count - 1, self.currentTabIndex + Int(amount)))
+                guard newIndex != self.currentTabIndex else { return }
+                let tab = self.tabs.remove(at: self.currentTabIndex)
+                self.tabs.insert(tab, at: newIndex)
+                self.currentTabIndex = newIndex
+                self.tabBarView.updateTabs(titles: self.tabs.map(\.title), selectedIndex: self.currentTabIndex)
+            }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermResetWindowSize, object: nil, queue: .main
+            ) { [weak self] _ in
+                self?.window?.setFrame(NSRect(x: 0, y: 0, width: 900, height: 600), display: true)
+                self?.window?.center()
             }
         )
     }
