@@ -75,6 +75,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
         contentContainerView = NSView()
         contentContainerView.translatesAutoresizingMaskIntoConstraints = false
         contentContainerView.wantsLayer = true
+        contentContainerView.layer?.masksToBounds = true
         contentView.addSubview(contentContainerView)
 
         NSLayoutConstraint.activate([
@@ -91,7 +92,14 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func createInitialTab() {
-        createNewTab()
+        let splitView = TerminalSplitView(ghosttyApp: ghosttyApp)
+        splitView.onSurfaceClosed = { [weak self] surface in
+            self?.closeCurrentTab()
+        }
+        let tab = TabItem(splitView: splitView, title: "Terminal 1")
+        tabs.append(tab)
+        selectTab(at: 0, animated: false)
+        tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
     }
 
     private func setupNotifications() {
@@ -232,46 +240,72 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
         }
 
         let newIndex = min(index, tabs.count - 1)
-        selectTab(at: newIndex)
+        selectTab(at: newIndex, animated: false)
         tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
     }
 
-    func selectTab(at index: Int, animated: Bool = false) {
-        guard index >= 0, index < tabs.count else { return }
+    private var isAnimatingTabSwitch = false
+
+    func selectTab(at index: Int, animated: Bool = true) {
+        guard index >= 0, index < tabs.count, !isAnimatingTabSwitch else { return }
 
         let previousIndex = currentTabIndex
         let oldSplit = (previousIndex < tabs.count) ? tabs[previousIndex].splitView : nil
         currentTabIndex = index
         let newSplit = tabs[index].splitView
+        let containerWidth = contentContainerView.bounds.width
 
         if oldSplit !== newSplit || newSplit.superview == nil {
-            if animated, let oldSplit, oldSplit !== newSplit {
-                let direction: CGFloat = index > previousIndex ? -1 : 1
-                newSplit.frame = contentContainerView.bounds
-                newSplit.layer?.transform = CATransform3DMakeTranslation(
-                    -direction * contentContainerView.bounds.width, 0, 0
+            if animated, let oldSplit, oldSplit !== newSplit, containerWidth > 0 {
+                isAnimatingTabSwitch = true
+                let goingRight = index > previousIndex
+
+                // Position new tab next to current tab.
+                newSplit.translatesAutoresizingMaskIntoConstraints = true
+                newSplit.frame = NSRect(
+                    x: goingRight ? containerWidth : -containerWidth,
+                    y: 0,
+                    width: containerWidth,
+                    height: contentContainerView.bounds.height
                 )
+                newSplit.autoresizingMask = [.height]
                 contentContainerView.addSubview(newSplit)
 
+                // Ensure old tab also uses frame positioning.
+                oldSplit.translatesAutoresizingMaskIntoConstraints = true
+                oldSplit.frame = NSRect(
+                    x: 0, y: 0,
+                    width: containerWidth,
+                    height: contentContainerView.bounds.height
+                )
+
+                // Animate bounds.origin.x to slide both tabs.
+                let targetX: CGFloat = goingRight ? containerWidth : -containerWidth
                 NSAnimationContext.runAnimationGroup({ context in
-                    context.duration = 0.25
-                    context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                    oldSplit.animator().layer?.transform = CATransform3DMakeTranslation(
-                        direction * contentContainerView.bounds.width, 0, 0
-                    )
-                    newSplit.animator().layer?.transform = CATransform3DIdentity
-                    newSplit.animator().layer?.opacity = 1.0
-                }, completionHandler: {
+                    context.duration = 0.3
+                    context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    contentContainerView.animator().bounds.origin.x = targetX
+                }, completionHandler: { [weak self] in
+                    guard let self else { return }
+                    // Reset: remove old tab, reset bounds, position new tab properly.
                     oldSplit.removeFromSuperview()
-                    oldSplit.layer?.transform = CATransform3DIdentity
-                    oldSplit.layer?.opacity = 1.0
+                    self.contentContainerView.bounds.origin.x = 0
+
+                    newSplit.translatesAutoresizingMaskIntoConstraints = false
+                    NSLayoutConstraint.activate([
+                        newSplit.topAnchor.constraint(equalTo: self.contentContainerView.topAnchor),
+                        newSplit.leadingAnchor.constraint(equalTo: self.contentContainerView.leadingAnchor),
+                        newSplit.trailingAnchor.constraint(equalTo: self.contentContainerView.trailingAnchor),
+                        newSplit.bottomAnchor.constraint(equalTo: self.contentContainerView.bottomAnchor),
+                    ])
+                    self.isAnimatingTabSwitch = false
                 })
             } else {
+                // No animation: just swap views.
                 if oldSplit !== newSplit {
                     oldSplit?.removeFromSuperview()
                 }
-                oldSplit?.layer?.transform = CATransform3DIdentity
-                oldSplit?.layer?.opacity = 1.0
+                contentContainerView.bounds.origin.x = 0
                 if newSplit.superview == nil {
                     newSplit.translatesAutoresizingMaskIntoConstraints = false
                     contentContainerView.addSubview(newSplit)
