@@ -539,10 +539,8 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
     // MARK: - Fullscreen
 
     func windowWillEnterFullScreen(_ notification: Notification) {
-        tabBarView.isHidden = true
     }
 
     func windowDidExitFullScreen(_ notification: Notification) {
-        tabBarView.isHidden = false
     }
 }
