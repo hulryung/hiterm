@@ -156,12 +156,22 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     // MARK: - Key Equivalents
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        // Let the menu system handle Cmd+key shortcuts (Cmd+N, Cmd+T, Cmd+W, etc.)
-        // by returning false here. Otherwise libghostty intercepts them in keyDown.
-        if event.modifierFlags.contains(.command) {
+        guard event.modifierFlags.contains(.command) else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        // Custom Cmd+key shortcuts handled here.
+        switch event.keyCode {
+        case 123: // Left arrow
+            NotificationCenter.default.post(name: .hitermSwipePrevTab, object: nil)
+            return true
+        case 124: // Right arrow
+            NotificationCenter.default.post(name: .hitermSwipeNextTab, object: nil)
+            return true
+        default:
+            // Let the menu system handle other Cmd+key shortcuts.
             return false
         }
-        return super.performKeyEquivalent(with: event)
     }
 
     // MARK: - Keyboard Input
