@@ -94,7 +94,20 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         cfg.font_size = 0 // use config default
         cfg.context = GHOSTTY_SURFACE_CONTEXT_WINDOW
 
-        self.surface = ghostty_surface_new(app, &cfg)
+        // Inject PROMPT_COMMAND for bash to report title on every prompt.
+        // This enables automatic tab title updates on cd, command execution, etc.
+        let promptCmd = #"printf "\e]0;%s\a" "${PWD##*/}""#
+        let envKey = "PROMPT_COMMAND"
+        self.surface = promptCmd.withCString { promptCStr in
+            envKey.withCString { keyCStr in
+                var envVars = [ghostty_env_var_s(key: keyCStr, value: promptCStr)]
+                return envVars.withUnsafeMutableBufferPointer { buf in
+                    cfg.env_vars = buf.baseAddress
+                    cfg.env_var_count = 1
+                    return ghostty_surface_new(app, &cfg)
+                }
+            }
+        }
 
         if let surface {
             let size = frame.size
@@ -565,9 +578,10 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     // MARK: - Notifications
 
     @objc private func handleSetTitle(_ notification: Notification) {
-        guard let notifSurface = notification.object as? UnsafeMutableRawPointer,
-              notifSurface == surface else { return }
-        if let title = notification.userInfo?["title"] as? String {
+        guard let title = notification.userInfo?["title"] as? String else { return }
+        // Match by userdata pointer (our TerminalSurfaceView pointer).
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        if let ud = notification.userInfo?["userdata"] as? UnsafeMutableRawPointer, ud == selfPtr {
             self.title = title
         }
     }

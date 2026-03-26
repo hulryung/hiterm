@@ -96,7 +96,10 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
         splitView.onSurfaceClosed = { [weak self] surface in
             self?.closeCurrentTab()
         }
-        let tab = TabItem(splitView: splitView, title: "Terminal 1")
+        splitView.onTitleChanged = { [weak self] title in
+            self?.updateTabTitle(for: splitView, title: title)
+        }
+        let tab = TabItem(splitView: splitView, title: "Terminal")
         tabs.append(tab)
         selectTab(at: 0, animated: false)
         tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
@@ -235,11 +238,23 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
         splitView.onSurfaceClosed = { [weak self] surface in
             self?.closeCurrentTab()
         }
+        splitView.onTitleChanged = { [weak self] title in
+            self?.updateTabTitle(for: splitView, title: title)
+        }
 
-        let tab = TabItem(splitView: splitView, title: "Terminal \(tabs.count + 1)")
+        let tab = TabItem(splitView: splitView, title: "Terminal")
         tabs.append(tab)
         selectTab(at: tabs.count - 1)
         tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
+    }
+
+    private func updateTabTitle(for splitView: TerminalSplitView, title: String) {
+        guard let index = tabs.firstIndex(where: { $0.splitView === splitView }) else { return }
+        tabs[index].title = title
+        tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
+        if index == currentTabIndex {
+            window?.title = title
+        }
     }
 
     private func closeCurrentTab() {

@@ -41,6 +41,7 @@ class TerminalSplitView: NSView {
     }
 
     var onSurfaceClosed: ((TerminalSurfaceView) -> Void)?
+    var onTitleChanged: ((String) -> Void)?
 
     var isSplit: Bool {
         if case .split = rootNode { return true }
@@ -59,6 +60,9 @@ class TerminalSplitView: NSView {
             guard let self, let surface else { return }
             self.handleSurfaceClosed(surface)
         }
+        surface.onTitleChanged = { [weak self] title in
+            self?.onTitleChanged?(title)
+        }
         self.focusedSurface = surface
     }
 
@@ -74,6 +78,9 @@ class TerminalSplitView: NSView {
         newSurface.onClosed = { [weak self, weak newSurface] in
             guard let self, let newSurface else { return }
             self.handleSurfaceClosed(newSurface)
+        }
+        newSurface.onTitleChanged = { [weak self] title in
+            self?.onTitleChanged?(title)
         }
 
         let container = SplitContainer(

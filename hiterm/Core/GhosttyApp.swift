@@ -121,10 +121,13 @@ class GhosttyApp {
             if target.tag == GHOSTTY_TARGET_SURFACE {
                 let surface = target.target.surface
                 let title = action.action.set_title.title.flatMap { String(cString: $0) } ?? ""
+                // Pass surface pointer as userdata via userInfo (not object)
+                // because NotificationCenter can lose UnsafeMutableRawPointer as object.
+                let surfaceUD = ghostty_surface_userdata(surface)
                 NotificationCenter.default.post(
                     name: .hitermSetTitle,
-                    object: surface,
-                    userInfo: ["title": title]
+                    object: nil,
+                    userInfo: ["title": title, "userdata": surfaceUD as Any]
                 )
             }
             return true
@@ -168,6 +171,22 @@ class GhosttyApp {
             return true
 
         case GHOSTTY_ACTION_PWD:
+            if target.tag == GHOSTTY_TARGET_SURFACE {
+                let surface = target.target.surface
+                if let pwdPtr = action.action.pwd.pwd {
+                    var pwd = String(cString: pwdPtr)
+                    // Show only last path component for cleaner tab title.
+                    if let lastComponent = pwd.split(separator: "/").last {
+                        pwd = String(lastComponent)
+                    }
+                    let surfaceUD = ghostty_surface_userdata(surface)
+                    NotificationCenter.default.post(
+                        name: .hitermSetTitle,
+                        object: nil,
+                        userInfo: ["title": pwd, "userdata": surfaceUD as Any]
+                    )
+                }
+            }
             return true
 
         case GHOSTTY_ACTION_RENDERER_HEALTH:

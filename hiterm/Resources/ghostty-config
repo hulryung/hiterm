@@ -1,2 +1,4 @@
 custom-shader = shaders/smoothscroll.glsl
 custom-shader-animation = true
+shell-integration = bash
+shell-integration-features = title
