@@ -468,51 +468,48 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         ghostty_surface_mouse_scroll(surface, x, y, mods)
     }
 
-    // MARK: - Two-Finger Swipe Tab Switching (via touch events)
+    // MARK: - Two-Finger Swipe Tab Switching (continuous panning)
 
     private var swipeTouchStartX: CGFloat?
-    private var swipeTriggered = false
 
     override func touchesBegan(with event: NSEvent) {
         let touches = event.touches(matching: .touching, in: self)
         if touches.count == 2 {
-            // Record starting X position (average of 2 fingers).
             let xs = touches.map { $0.normalizedPosition.x }
             swipeTouchStartX = xs.reduce(0, +) / CGFloat(xs.count)
-            swipeTriggered = false
+            NotificationCenter.default.post(name: .hitermSwipeBegan, object: nil)
         }
         super.touchesBegan(with: event)
     }
 
     override func touchesMoved(with event: NSEvent) {
         let touches = event.touches(matching: .touching, in: self)
-        if touches.count == 2, let startX = swipeTouchStartX, !swipeTriggered {
+        if touches.count == 2, let startX = swipeTouchStartX {
             let xs = touches.map { $0.normalizedPosition.x }
             let currentX = xs.reduce(0, +) / CGFloat(xs.count)
-            let delta = currentX - startX
-
-            // normalizedPosition is 0..1; threshold ~0.15 = decent swipe distance.
-            let threshold: CGFloat = 0.15
-            if delta > threshold {
-                swipeTriggered = true
-                NotificationCenter.default.post(name: .hitermSwipePrevTab, object: nil)
-            } else if delta < -threshold {
-                swipeTriggered = true
-                NotificationCenter.default.post(name: .hitermSwipeNextTab, object: nil)
-            }
+            let delta = currentX - startX  // normalized 0..1
+            NotificationCenter.default.post(
+                name: .hitermSwipeMoved,
+                object: nil,
+                userInfo: ["delta": delta]
+            )
         }
         super.touchesMoved(with: event)
     }
 
     override func touchesEnded(with event: NSEvent) {
+        if swipeTouchStartX != nil {
+            NotificationCenter.default.post(name: .hitermSwipeEnded, object: nil)
+        }
         swipeTouchStartX = nil
-        swipeTriggered = false
         super.touchesEnded(with: event)
     }
 
     override func touchesCancelled(with event: NSEvent) {
+        if swipeTouchStartX != nil {
+            NotificationCenter.default.post(name: .hitermSwipeEnded, object: nil)
+        }
         swipeTouchStartX = nil
-        swipeTriggered = false
         super.touchesCancelled(with: event)
     }
 

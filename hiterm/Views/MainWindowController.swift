@@ -151,6 +151,24 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
         )
         observers.append(
             NotificationCenter.default.addObserver(
+                forName: .hitermSwipeBegan, object: nil, queue: .main
+            ) { [weak self] _ in self?.swipePanBegan() }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermSwipeMoved, object: nil, queue: .main
+            ) { [weak self] notif in
+                guard let delta = notif.userInfo?["delta"] as? CGFloat else { return }
+                self?.swipePanMoved(delta: delta)
+            }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermSwipeEnded, object: nil, queue: .main
+            ) { [weak self] _ in self?.swipePanEnded() }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
                 forName: .hitermNewWindow, object: nil, queue: .main
             ) { _ in
                 if let delegate = NSApp.delegate as? AppDelegate {
@@ -322,6 +340,142 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
         tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
 
         window?.title = tabs[index].title
+    }
+
+    // MARK: - Continuous Swipe Panning
+
+    private var panStartIndex: Int = 0
+    private var panPrevSplit: TerminalSplitView?
+    private var panNextSplit: TerminalSplitView?
+    private var isPanning = false
+
+    private func swipePanBegan() {
+        guard tabs.count > 1, !isAnimatingTabSwitch else { return }
+        isPanning = true
+        panStartIndex = currentTabIndex
+
+        let containerWidth = contentContainerView.bounds.width
+        let containerHeight = contentContainerView.bounds.height
+
+        // Prepare previous tab (to the left).
+        if currentTabIndex > 0 {
+            let prev = tabs[currentTabIndex - 1].splitView
+            prev.translatesAutoresizingMaskIntoConstraints = true
+            prev.frame = NSRect(x: -containerWidth, y: 0, width: containerWidth, height: containerHeight)
+            prev.autoresizingMask = [.height]
+            contentContainerView.addSubview(prev)
+            panPrevSplit = prev
+        }
+
+        // Prepare next tab (to the right).
+        if currentTabIndex < tabs.count - 1 {
+            let next = tabs[currentTabIndex + 1].splitView
+            next.translatesAutoresizingMaskIntoConstraints = true
+            next.frame = NSRect(x: containerWidth, y: 0, width: containerWidth, height: containerHeight)
+            next.autoresizingMask = [.height]
+            contentContainerView.addSubview(next)
+            panNextSplit = next
+        }
+
+        // Current tab also needs frame positioning.
+        let current = tabs[currentTabIndex].splitView
+        current.translatesAutoresizingMaskIntoConstraints = true
+        current.frame = NSRect(x: 0, y: 0, width: containerWidth, height: containerHeight)
+    }
+
+    private func swipePanMoved(delta: CGFloat) {
+        guard isPanning else { return }
+        // delta is normalized (0..1 across trackpad). Scale to view width.
+        let containerWidth = contentContainerView.bounds.width
+        let offsetX = -delta * containerWidth * 2  // 2x for responsive feel
+
+        // Clamp: don't pan past edges if no prev/next tab.
+        let clampedX: CGFloat
+        if panPrevSplit == nil && offsetX < 0 {
+            clampedX = 0
+        } else if panNextSplit == nil && offsetX > 0 {
+            clampedX = 0
+        } else {
+            clampedX = offsetX
+        }
+
+        contentContainerView.bounds.origin.x = clampedX
+    }
+
+    private func swipePanEnded() {
+        guard isPanning else { return }
+        isPanning = false
+
+        let containerWidth = contentContainerView.bounds.width
+        let currentX = contentContainerView.bounds.origin.x
+        let threshold = containerWidth * 0.3
+
+        if currentX > threshold, panNextSplit != nil {
+            // Commit: switch to next tab.
+            isAnimatingTabSwitch = true
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                contentContainerView.animator().bounds.origin.x = containerWidth
+            }, completionHandler: { [weak self] in
+                self?.finishPanSwitch(to: self!.panStartIndex + 1)
+            })
+        } else if currentX < -threshold, panPrevSplit != nil {
+            // Commit: switch to previous tab.
+            isAnimatingTabSwitch = true
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                contentContainerView.animator().bounds.origin.x = -containerWidth
+            }, completionHandler: { [weak self] in
+                self?.finishPanSwitch(to: self!.panStartIndex - 1)
+            })
+        } else {
+            // Snap back to original tab.
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                contentContainerView.animator().bounds.origin.x = 0
+            }, completionHandler: { [weak self] in
+                self?.cleanupPanViews()
+            })
+        }
+    }
+
+    private func finishPanSwitch(to index: Int) {
+        cleanupPanViews()
+        currentTabIndex = index
+        let newSplit = tabs[index].splitView
+
+        // Reset bounds and set up the new tab properly.
+        contentContainerView.bounds.origin.x = 0
+        newSplit.translatesAutoresizingMaskIntoConstraints = false
+        if newSplit.superview != contentContainerView {
+            contentContainerView.addSubview(newSplit)
+        }
+        NSLayoutConstraint.activate([
+            newSplit.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
+            newSplit.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
+            newSplit.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
+            newSplit.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
+        ])
+
+        newSplit.focusedSurface.map { window?.makeFirstResponder($0) }
+        tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
+        window?.title = tabs[index].title
+        isAnimatingTabSwitch = false
+    }
+
+    private func cleanupPanViews() {
+        // Remove non-current tabs from superview.
+        for (i, tab) in tabs.enumerated() where i != currentTabIndex {
+            if tab.splitView.superview == contentContainerView {
+                tab.splitView.removeFromSuperview()
+            }
+        }
+        contentContainerView.bounds.origin.x = 0
+        panPrevSplit = nil
+        panNextSplit = nil
     }
 
     // MARK: - Split
