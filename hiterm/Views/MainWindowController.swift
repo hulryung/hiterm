@@ -542,14 +542,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate {
         tabBarView.isHidden = true
     }
 
-    func windowDidEnterFullScreen(_ notification: Notification) {
-    }
-
-    func windowWillExitFullScreen(_ notification: Notification) {
-    }
-
     func windowDidExitFullScreen(_ notification: Notification) {
         tabBarView.isHidden = false
-        selectTab(at: currentTabIndex)
     }
 }
