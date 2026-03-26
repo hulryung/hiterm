@@ -61,14 +61,28 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
 
     private func updateSurfaceSize() {
         guard let surface else { return }
-        let scaleFactor = window?.backingScaleFactor ?? 2.0
-        // Tell libghostty the surface dimensions in backing pixels.
+
+        // Match Ghostty's approach: use convertToBacking for exact pixel dimensions.
+        let scaledSize = convertToBacking(bounds.size)
         ghostty_surface_set_size(
             surface,
-            UInt32(bounds.width * scaleFactor),
-            UInt32(bounds.height * scaleFactor)
+            UInt32(scaledSize.width),
+            UInt32(scaledSize.height)
         )
-        ghostty_surface_set_content_scale(surface, scaleFactor, scaleFactor)
+
+        // Set content scale from actual backing ratio (not just backingScaleFactor).
+        let fbFrame = convertToBacking(frame)
+        let xScale = frame.width > 0 ? fbFrame.width / frame.width : 2.0
+        let yScale = frame.height > 0 ? fbFrame.height / frame.height : 2.0
+        ghostty_surface_set_content_scale(surface, xScale, yScale)
+
+        // Ensure IOSurface layer is not scaled by the compositor.
+        if let window {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            layer?.contentsScale = window.backingScaleFactor
+            CATransaction.commit()
+        }
     }
 
     private func tryCreateSurface() {
@@ -110,13 +124,7 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         }
 
         if let surface {
-            let size = frame.size
-            let scaleFactor = window?.backingScaleFactor ?? 2.0
-            ghostty_surface_set_size(
-                surface,
-                UInt32(size.width * scaleFactor),
-                UInt32(size.height * scaleFactor)
-            )
+            updateSurfaceSize()
             ghostty_surface_set_focus(surface, true)
         }
     }
