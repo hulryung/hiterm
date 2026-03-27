@@ -288,18 +288,15 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         guard index >= 0, index < tabs.count else { return }
 
         if isAnimatingTabSwitch && animated {
-            // Already animating: just retarget.
+            // Already animating: just retarget. Don't touch tab bar until finish.
             keyAnimTargetIndex = index
-            currentTabIndex = index
-            tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
-            window?.title = tabs[index].title
             return
         }
 
         let previousIndex = currentTabIndex
         let oldSplit = (previousIndex < tabs.count) ? tabs[previousIndex].splitView : nil
-        currentTabIndex = index
         let newSplit = tabs[index].splitView
+        // Don't update currentTabIndex yet for animated path — let keyAnimTick do it.
         let containerWidth = contentContainerView.bounds.width
 
         if oldSplit !== newSplit || newSplit.superview == nil {
@@ -317,7 +314,14 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
                     width: containerWidth * CGFloat(tabs.count),
                     height: height
                 ))
-                for (i, tab) in tabs.enumerated() {
+                container.wantsLayer = true
+
+                // Add container FIRST so there's no blank frame.
+                contentContainerView.addSubview(container)
+
+                // Move non-current tabs first, current tab last
+                // to minimize visual disruption.
+                for (i, tab) in tabs.enumerated() where i != previousIndex {
                     let sv = tab.splitView
                     sv.removeFromSuperview()
                     sv.translatesAutoresizingMaskIntoConstraints = true
@@ -325,7 +329,14 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
                     sv.autoresizingMask = [.height]
                     container.addSubview(sv)
                 }
-                contentContainerView.addSubview(container)
+                // Move current tab last.
+                let currentSv = tabs[previousIndex].splitView
+                currentSv.removeFromSuperview()
+                currentSv.translatesAutoresizingMaskIntoConstraints = true
+                currentSv.frame = NSRect(x: CGFloat(previousIndex) * containerWidth, y: 0, width: containerWidth, height: height)
+                currentSv.autoresizingMask = [.height]
+                container.addSubview(currentSv)
+
                 keyAnimContainerView = container
 
                 // Start timer-based animation.
@@ -333,8 +344,11 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
                 keyAnimTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
                     self?.keyAnimTick()
                 }
+                // Don't update tab bar during animation — only on finish.
+                return
             } else {
                 // No animation: just swap views.
+                currentTabIndex = index
                 if oldSplit !== newSplit {
                     oldSplit?.removeFromSuperview()
                 }
@@ -369,25 +383,28 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         let targetX = CGFloat(keyAnimBaseIndex - keyAnimTargetIndex) * width
         let distance = targetX - keyAnimCurrentX
 
+        // Move 20% of remaining distance per frame (fast ease-out).
         if abs(distance) < 1.0 {
             keyAnimCurrentX = targetX
-            container.frame.origin.x = -CGFloat(keyAnimBaseIndex) * width + keyAnimCurrentX
-            finishKeyAnim()
-            return
+        } else {
+            keyAnimCurrentX += distance * 0.2
         }
-
-        // Move 20% of remaining distance per frame (fast ease-out).
-        keyAnimCurrentX += distance * 0.2
         container.frame.origin.x = -CGFloat(keyAnimBaseIndex) * width + keyAnimCurrentX
 
-        // Update tab bar when crossing halfway.
-        let visualOffset = -keyAnimCurrentX / width
-        let visualIndex = keyAnimBaseIndex + Int(visualOffset.rounded())
-        let clamped = max(0, min(tabs.count - 1, visualIndex))
-        if clamped != currentTabIndex {
-            currentTabIndex = clamped
-            tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
-            window?.title = tabs[clamped].title
+        // Update tab bar when 30% of the way to the target.
+        let progress = targetX != 0 ? abs(keyAnimCurrentX / targetX) : 1.0
+        if progress > 0.3 {
+            let targetIdx = keyAnimTargetIndex
+            if targetIdx != currentTabIndex {
+                currentTabIndex = targetIdx
+                tabBarView.updateSelection(targetIdx)
+                window?.title = tabs[targetIdx].title
+            }
+        }
+
+        // Animation complete.
+        if abs(keyAnimCurrentX - targetX) < 1.0 {
+            finishKeyAnim()
         }
     }
 
@@ -398,6 +415,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         let targetIndex = keyAnimTargetIndex
         let targetSplit = tabs[targetIndex].splitView
 
+        // Move target to contentContainerView before removing container.
         targetSplit.removeFromSuperview()
         targetSplit.translatesAutoresizingMaskIntoConstraints = false
         contentContainerView.addSubview(targetSplit)
@@ -414,8 +432,13 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
 
         currentTabIndex = targetIndex
         isAnimatingTabSwitch = false
-        tabs[targetIndex].splitView.focusedSurface.map { window?.makeFirstResponder($0) }
-        tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
+
+        // Defer focus change to avoid mid-layout flicker.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.tabs[targetIndex].splitView.focusedSurface.map { self.window?.makeFirstResponder($0) }
+        }
+        tabBarView.updateSelection(currentTabIndex)
         window?.title = tabs[targetIndex].title
     }
 
@@ -471,7 +494,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         let clampedIndex = max(0, min(tabs.count - 1, visualIndex))
         if clampedIndex != currentTabIndex {
             currentTabIndex = clampedIndex
-            tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
+            tabBarView.updateSelection(clampedIndex)
             window?.title = tabs[clampedIndex].title
         }
     }

@@ -20,9 +20,8 @@ targets:
           - "*.xcodeproj"
     postCompileScripts:
       - script: |
-          cp -R "${PROJECT_DIR}/shaders" "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/shaders"
           cp "${PROJECT_DIR}/hiterm/Resources/ghostty-config" "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config"
-        name: Copy shader and config resources
+        name: Copy config resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hiterm.app

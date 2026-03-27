@@ -135,7 +135,7 @@
 			buildConfigurationList = 0B04A2A9D5027BD7320AD63C /* Build configuration list for PBXNativeTarget "hiterm" */;
 			buildPhases = (
 				0FCFAFC2337A375A433006A9 /* Sources */,
-				25ADB702AD17442FB6AF5346 /* Copy shader and config resources */,
+				EFB6C563A48BF3E51FB4464B /* Copy config resources */,
 				F86B041787C739A1926A0C06 /* Resources */,
 			);
 			buildRules = (
@@ -191,7 +191,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		25ADB702AD17442FB6AF5346 /* Copy shader and config resources */ = {
+		EFB6C563A48BF3E51FB4464B /* Copy config resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -200,14 +200,14 @@
 			);
 			inputPaths = (
 			);
-			name = "Copy shader and config resources";
+			name = "Copy config resources";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cp -R \"${PROJECT_DIR}/shaders\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/shaders\"\ncp \"${PROJECT_DIR}/hiterm/Resources/ghostty-config\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config\"\n";
+			shellScript = "cp \"${PROJECT_DIR}/hiterm/Resources/ghostty-config\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

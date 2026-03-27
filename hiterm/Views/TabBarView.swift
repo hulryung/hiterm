@@ -53,10 +53,27 @@ class TabBarView: NSView {
         ])
     }
 
+    func updateSelection(_ index: Int) {
+        guard index != selectedIndex else { return }
+        selectedIndex = index
+        for (i, button) in tabButtons.enumerated() {
+            button.updateSelected(i == index)
+        }
+    }
+
     func updateTabs(titles: [String], selectedIndex: Int) {
         self.selectedIndex = selectedIndex
 
-        // Remove old buttons
+        if tabButtons.count == titles.count {
+            // Same number of tabs: update in-place (no flicker).
+            for (i, button) in tabButtons.enumerated() {
+                button.updateTitle(titles[i])
+                button.updateSelected(i == selectedIndex)
+            }
+            return
+        }
+
+        // Tab count changed: rebuild.
         tabButtons.forEach { $0.removeFromSuperview() }
         tabButtons.removeAll()
 
@@ -85,7 +102,7 @@ class TabButton: NSView {
     var onClosed: ((Int) -> Void)?
 
     private let index: Int
-    private let isSelected: Bool
+    private(set) var isSelected: Bool
     private let titleLabel = NSTextField(labelWithString: "")
     private let closeButton = NSButton()
 
@@ -144,6 +161,26 @@ class TabButton: NSView {
 
         let click = NSClickGestureRecognizer(target: self, action: #selector(tabClicked))
         addGestureRecognizer(click)
+    }
+
+    func updateTitle(_ title: String) {
+        titleLabel.stringValue = title
+    }
+
+    func updateSelected(_ selected: Bool) {
+        guard isSelected != selected else { return }
+        isSelected = selected
+        NSAnimationContext.beginGrouping()
+        NSAnimationContext.current.duration = 0
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer?.backgroundColor = selected
+            ? NSColor(red: 0.25, green: 0.25, blue: 0.27, alpha: 1.0).cgColor
+            : NSColor(red: 0.18, green: 0.18, blue: 0.19, alpha: 1.0).cgColor
+        titleLabel.textColor = selected ? .white : NSColor(white: 0.55, alpha: 1.0)
+        closeButton.isHidden = !selected
+        CATransaction.commit()
+        NSAnimationContext.endGrouping()
     }
 
     override func updateTrackingAreas() {

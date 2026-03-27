@@ -19,7 +19,6 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         super.init(frame: frame)
         wantsLayer = true
         layer?.isOpaque = true
-        allowedTouchTypes = [.indirect]  // Enable trackpad touch events
 
         NotificationCenter.default.addObserver(
             self,
