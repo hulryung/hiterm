@@ -175,17 +175,11 @@ class SwipeTracker {
         let width = delegate.swipeTabWidth
         let count = delegate.swipeTabCount
         let currentIndex = delegate.swipeCurrentIndex
-        let maxWiggle = width * 0.15
 
+        // Hard clamp at boundaries — no blank space beyond first/last tab.
         let upperBound = CGFloat(currentIndex) * width
         let lowerBound = -CGFloat(count - 1 - currentIndex) * width
 
-        if x > upperBound {
-            return upperBound + maxWiggle * (1.0 - exp(-(x - upperBound) / maxWiggle))
-        } else if x < lowerBound {
-            let overshoot = lowerBound - x
-            return lowerBound - maxWiggle * (1.0 - exp(-overshoot / maxWiggle))
-        }
-        return x
+        return max(lowerBound, min(upperBound, x))
     }
 }

@@ -363,7 +363,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
     private var swipeStartIndex: Int = 0
 
     var swipeTabCount: Int { tabs.count }
-    var swipeCurrentIndex: Int { currentTabIndex }
+    var swipeCurrentIndex: Int { swipeStartIndex }
     var swipeTabWidth: CGFloat { contentContainerView.bounds.width }
 
     func swipeBeganSession() {
@@ -420,12 +420,14 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
             return
         }
 
-        // Clean up: remove container, place target tab back with constraints.
-        swipeContainerView?.removeFromSuperview()
-        swipeContainerView = nil
-
         currentTabIndex = targetIndex
         let newSplit = tabs[targetIndex].splitView
+
+        // Detach target from the swipe container first.
+        newSplit.removeFromSuperview()
+
+        // Add target to content container BEFORE removing the swipe container
+        // to avoid a blank frame flash.
         newSplit.translatesAutoresizingMaskIntoConstraints = false
         contentContainerView.addSubview(newSplit)
         NSLayoutConstraint.activate([
@@ -434,6 +436,10 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
             newSplit.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
             newSplit.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
         ])
+
+        // Now remove the swipe container (other tabs get detached).
+        swipeContainerView?.removeFromSuperview()
+        swipeContainerView = nil
 
         newSplit.focusedSurface.map { window?.makeFirstResponder($0) }
         tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
