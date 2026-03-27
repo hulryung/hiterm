@@ -263,18 +263,59 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
 
     func closeTab(at index: Int) {
         guard index < tabs.count else { return }
+
+        // Cancel any in-progress animations.
+        keyAnimTimer?.invalidate()
+        keyAnimTimer = nil
+        keyAnimContainerView?.removeFromSuperview()
+        keyAnimContainerView = nil
+        isAnimatingTabSwitch = false
+
         let tab = tabs[index]
-        tab.splitView.removeFromSuperview()
+        let closingSplit = tab.splitView
+
         tabs.remove(at: index)
 
         if tabs.isEmpty {
+            closingSplit.removeFromSuperview()
             window?.close()
             return
         }
 
         let newIndex = min(index, tabs.count - 1)
-        selectTab(at: newIndex, animated: false)
+        let newSplit = tabs[newIndex].splitView
+
+        // Place new tab underneath the closing tab.
+        newSplit.translatesAutoresizingMaskIntoConstraints = false
+        contentContainerView.addSubview(newSplit, positioned: .below, relativeTo: closingSplit)
+        NSLayoutConstraint.activate([
+            newSplit.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
+            newSplit.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
+            newSplit.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
+            newSplit.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
+        ])
+
+        currentTabIndex = newIndex
         tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
+        window?.title = tabs[newIndex].title
+
+        // Animate closing tab sliding down.
+        closingSplit.translatesAutoresizingMaskIntoConstraints = true
+        let startFrame = closingSplit.frame
+        var timer: Timer?
+        var progress: CGFloat = 0
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            progress += 0.08
+            if progress >= 1.0 {
+                timer?.invalidate()
+                closingSplit.removeFromSuperview()
+                newSplit.focusedSurface.map { self?.window?.makeFirstResponder($0) }
+                return
+            }
+            let ease = progress * progress // ease-in
+            closingSplit.frame.origin.y = startFrame.origin.y - startFrame.height * ease
+            closingSplit.alphaValue = 1.0 - ease
+        }
     }
 
     private var isAnimatingTabSwitch = false

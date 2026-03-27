@@ -116,18 +116,43 @@ class TerminalSplitView: NSView {
             return
         }
 
-        rootNode = replaceParentSplit(in: rootNode, removing: surface, replacingWith: sibling)
-        surface.removeFromSuperview()
+        // Animate: slide the closing pane off while keeping content fixed.
+        let closingFrame = surface.frame
+        surface.translatesAutoresizingMaskIntoConstraints = true
+        surface.autoresizingMask = []
 
-        // Remove all dividers and recreate for current split state.
+        // Immediately update the tree and layout the sibling to fill the space.
+        rootNode = replaceParentSplit(in: rootNode, removing: surface, replacingWith: sibling)
         dividerViews.forEach { $0.removeFromSuperview() }
         dividerViews.removeAll()
         rebuildDividers(rootNode)
-
         layoutSplits()
 
         if let firstLeaf = findFirstLeaf(in: rootNode) {
             focusedSurface = firstLeaf
+        }
+
+        // The closing surface is still in the view hierarchy (detached from tree).
+        // Animate it sliding away from its original position.
+        surface.frame = closingFrame
+        surface.wantsLayer = true
+        addSubview(surface)
+
+        var progress: CGFloat = 0
+        var timer: Timer?
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            guard let self else { timer?.invalidate(); return }
+            progress += 0.08
+            if progress >= 1.0 {
+                timer?.invalidate()
+                surface.removeFromSuperview()
+                return
+            }
+            let ease = progress * progress
+            surface.alphaValue = 1.0 - ease
+            // Slide in the direction of the nearest edge.
+            let dx = closingFrame.midX > self.bounds.midX ? closingFrame.width * 0.3 * ease : -closingFrame.width * 0.3 * ease
+            surface.frame.origin.x = closingFrame.origin.x + dx
         }
     }
 
