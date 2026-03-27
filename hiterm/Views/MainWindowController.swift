@@ -636,6 +636,11 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
     // MARK: - Fullscreen
 
     func windowWillEnterFullScreen(_ notification: Notification) {
+        tabBarView.setFullscreen(true)
+    }
+
+    func windowWillExitFullScreen(_ notification: Notification) {
+        tabBarView.setFullscreen(false)
     }
 
     func windowDidExitFullScreen(_ notification: Notification) {

@@ -8,10 +8,13 @@ class TabBarView: NSView {
 
     private var tabButtons: [TabButton] = []
     private let newTabButton = NSButton()
+    private let logoIcon = NSImageView()
+    private let logoLabel = NSTextField(labelWithString: "HI! TERM")
     private var selectedIndex: Int = 0
 
-    private let leadingPad: CGFloat = 78
+    private let defaultLeadingPad: CGFloat = 78
     private let trailingPad: CGFloat = 36
+    private var isFullscreen = false
     private let tabSpacing: CGFloat = 2
     private let maxTabWidth: CGFloat = 200
     private let minTabWidth: CGFloat = 50
@@ -29,6 +32,22 @@ class TabBarView: NSView {
         wantsLayer = true
         layer?.backgroundColor = NSColor(red: 0.15, green: 0.15, blue: 0.16, alpha: 1.0).cgColor
 
+        // Logo icon + label (hidden by default, shown in fullscreen).
+        if let appIcon = NSImage(named: "AppIcon") {
+            logoIcon.image = appIcon
+        }
+        logoIcon.imageScaling = .scaleProportionallyUpOrDown
+        logoIcon.isHidden = true
+        addSubview(logoIcon)
+
+        logoLabel.font = .systemFont(ofSize: 11, weight: .bold)
+        logoLabel.textColor = NSColor(white: 0.45, alpha: 1.0)
+        logoLabel.isEditable = false
+        logoLabel.isBezeled = false
+        logoLabel.drawsBackground = false
+        logoLabel.isHidden = true
+        addSubview(logoLabel)
+
         newTabButton.title = "+"
         newTabButton.bezelStyle = .inline
         newTabButton.isBordered = false
@@ -45,6 +64,14 @@ class TabBarView: NSView {
     }
 
     private func layoutTabs() {
+        // Logo: icon + "HI! TERM" in the leading 78px area.
+        let iconSize: CGFloat = 20
+        let iconX: CGFloat = 10
+        let iconY = (bounds.height - iconSize) / 2
+        logoIcon.frame = NSRect(x: iconX, y: iconY, width: iconSize, height: iconSize)
+        logoLabel.sizeToFit()
+        logoLabel.frame.origin = NSPoint(x: iconX + iconSize + 4, y: (bounds.height - logoLabel.frame.height) / 2)
+
         let btnSize: CGFloat = 28
         newTabButton.frame = NSRect(
             x: bounds.width - btnSize - 8,
@@ -54,6 +81,13 @@ class TabBarView: NSView {
         )
 
         guard !tabButtons.isEmpty else { return }
+        // In fullscreen, leading pad = logo width + padding. Otherwise, space for traffic lights.
+        let leadingPad: CGFloat
+        if isFullscreen {
+            leadingPad = logoLabel.frame.maxX + 10
+        } else {
+            leadingPad = defaultLeadingPad
+        }
         let count = CGFloat(tabButtons.count)
         let available = bounds.width - leadingPad - trailingPad - tabSpacing * (count - 1)
         let perTab = max(minTabWidth, min(maxTabWidth, available / count))
@@ -68,6 +102,13 @@ class TabBarView: NSView {
                 height: tabHeight
             )
         }
+    }
+
+    func setFullscreen(_ fullscreen: Bool) {
+        isFullscreen = fullscreen
+        logoIcon.isHidden = !fullscreen
+        logoLabel.isHidden = !fullscreen
+        layoutTabs()
     }
 
     func updateSelection(_ index: Int) {
@@ -170,7 +211,9 @@ class TabButton: NSView {
         let h = bounds.height
         let closeSize: CGFloat = 16
         closeButton.frame = NSRect(x: bounds.width - closeSize - 6, y: (h - closeSize) / 2, width: closeSize, height: closeSize)
-        titleLabel.frame = NSRect(x: 10, y: 0, width: bounds.width - 36, height: h)
+        titleLabel.sizeToFit()
+        let labelH = titleLabel.frame.height
+        titleLabel.frame = NSRect(x: 10, y: (h - labelH) / 2, width: bounds.width - 36, height: labelH)
     }
 
     func updateTitle(_ title: String) {
