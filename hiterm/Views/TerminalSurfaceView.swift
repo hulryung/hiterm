@@ -465,9 +465,18 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         sendMousePos(event: event)
     }
 
-    override func scrollWheel(with event: NSEvent) {
-        guard let surface else { return }
+    // MARK: - Scroll / Swipe
 
+    var swipeTracker: SwipeTracker?
+
+    override func scrollWheel(with event: NSEvent) {
+        // Let swipe tracker try first (handles direction lock internally).
+        if let tracker = swipeTracker, tracker.handleEvent(event) {
+            return  // Horizontal swipe consumed the event.
+        }
+
+        // Vertical scroll → forward to libghostty.
+        guard let surface else { return }
         var x = event.scrollingDeltaX
         var y = event.scrollingDeltaY
         if event.hasPreciseScrollingDeltas {
@@ -487,51 +496,6 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         }
         mods |= (momentum << 1)
         ghostty_surface_mouse_scroll(surface, x, y, mods)
-    }
-
-    // MARK: - Two-Finger Swipe Tab Switching (continuous panning)
-
-    private var swipeTouchStartX: CGFloat?
-
-    override func touchesBegan(with event: NSEvent) {
-        let touches = event.touches(matching: .touching, in: self)
-        if touches.count == 2 {
-            let xs = touches.map { $0.normalizedPosition.x }
-            swipeTouchStartX = xs.reduce(0, +) / CGFloat(xs.count)
-            NotificationCenter.default.post(name: .hitermSwipeBegan, object: nil)
-        }
-        super.touchesBegan(with: event)
-    }
-
-    override func touchesMoved(with event: NSEvent) {
-        let touches = event.touches(matching: .touching, in: self)
-        if touches.count == 2, let startX = swipeTouchStartX {
-            let xs = touches.map { $0.normalizedPosition.x }
-            let currentX = xs.reduce(0, +) / CGFloat(xs.count)
-            let delta = currentX - startX  // normalized 0..1
-            NotificationCenter.default.post(
-                name: .hitermSwipeMoved,
-                object: nil,
-                userInfo: ["delta": delta]
-            )
-        }
-        super.touchesMoved(with: event)
-    }
-
-    override func touchesEnded(with event: NSEvent) {
-        if swipeTouchStartX != nil {
-            NotificationCenter.default.post(name: .hitermSwipeEnded, object: nil)
-        }
-        swipeTouchStartX = nil
-        super.touchesEnded(with: event)
-    }
-
-    override func touchesCancelled(with event: NSEvent) {
-        if swipeTouchStartX != nil {
-            NotificationCenter.default.post(name: .hitermSwipeEnded, object: nil)
-        }
-        swipeTouchStartX = nil
-        super.touchesCancelled(with: event)
     }
 
     private func sendMousePos(event: NSEvent) {

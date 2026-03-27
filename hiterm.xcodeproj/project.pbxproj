@@ -16,6 +16,7 @@
 		C041F963EAC6FA4FDE9ABF7E /* TabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E10561221C5F26E7D6C874E /* TabBarView.swift */; };
 		C225DEB0A272641226D70968 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF04450FE71D8B46904AF809 /* MainWindowController.swift */; };
 		C49E9A1F7C74354AE9B22EC2 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D21751093EE69E62D873B364 /* main.swift */; };
+		E3D630AD9A035BF892C6CE42 /* SwipeTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E872008AD7E72FD2615BA7 /* SwipeTracker.swift */; };
 		EBFBCB7720794CB29A06597D /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CC4A24FF2232A7ED3EF894 /* SettingsManager.swift */; };
 		F2BABA1A57C4EB4DD5A96BCA /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A7C29A9012257BE8DFDFE0 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
@@ -31,6 +32,7 @@
 		9769B7213206E6881B2C5A60 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A5F65FF5E61FC612F5F2B9DC /* SplitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitView.swift; sourceTree = "<group>"; };
 		AF04450FE71D8B46904AF809 /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
+		C1E872008AD7E72FD2615BA7 /* SwipeTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeTracker.swift; sourceTree = "<group>"; };
 		D0E4445BF957CED366D62099 /* hiterm.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = hiterm.entitlements; sourceTree = "<group>"; };
 		D21751093EE69E62D873B364 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D3CC4A24FF2232A7ED3EF894 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
@@ -48,6 +50,14 @@
 			path = Core;
 			sourceTree = "<group>";
 		};
+		5D4EF7F19A4F671965A47801 /* Input */ = {
+			isa = PBXGroup;
+			children = (
+				C1E872008AD7E72FD2615BA7 /* SwipeTracker.swift */,
+			);
+			path = Input;
+			sourceTree = "<group>";
+		};
 		69708F2B7DAA560439B9307B = {
 			isa = PBXGroup;
 			children = (
@@ -62,6 +72,7 @@
 				9769B7213206E6881B2C5A60 /* Assets.xcassets */,
 				FCA0FEDADB4DBF751C862818 /* App */,
 				2354ABB4D54E9DDEABA23A60 /* Core */,
+				5D4EF7F19A4F671965A47801 /* Input */,
 				93BE989E037607D14AC3A12D /* Resources */,
 				D97F848F70730C451A393676 /* Views */,
 			);
@@ -212,6 +223,7 @@
 				BFFA000C7DD20C8745D3363C /* SettingsView.swift in Sources */,
 				A3F6A16307BD39DD2CFA3713 /* SettingsWindowController.swift in Sources */,
 				08E33835EC9B2EA6A4FE536B /* SplitView.swift in Sources */,
+				E3D630AD9A035BF892C6CE42 /* SwipeTracker.swift in Sources */,
 				C041F963EAC6FA4FDE9ABF7E /* TabBarView.swift in Sources */,
 				65F695CA9266824C75EC8FAE /* TerminalSurfaceView.swift in Sources */,
 				C49E9A1F7C74354AE9B22EC2 /* main.swift in Sources */,

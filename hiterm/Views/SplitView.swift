@@ -42,6 +42,7 @@ class TerminalSplitView: NSView {
 
     var onSurfaceClosed: ((TerminalSurfaceView) -> Void)?
     var onTitleChanged: ((String) -> Void)?
+    var onSurfaceCreated: ((TerminalSurfaceView) -> Void)?
 
     var isSplit: Bool {
         if case .split = rootNode { return true }
@@ -82,6 +83,7 @@ class TerminalSplitView: NSView {
         newSurface.onTitleChanged = { [weak self] title in
             self?.onTitleChanged?(title)
         }
+        onSurfaceCreated?(newSurface)
 
         let container = SplitContainer(
             direction: direction,
