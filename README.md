@@ -96,9 +96,17 @@ xcodebuild -scheme hiterm build
 xcodebuild -scheme hiterm test
 ```
 
-## Download
+## Install
 
-Pre-built signed and notarized DMGs are available on the [Releases](https://github.com/hulryung/hiterm/releases) page. Apple Silicon (arm64) only.
+### Homebrew
+
+```bash
+brew install --cask hulryung/tap/hiterm
+```
+
+### Manual
+
+Download the signed and notarized DMG from [Releases](https://github.com/hulryung/hiterm/releases). Apple Silicon (arm64) only.
 
 ## Acknowledgments
 
