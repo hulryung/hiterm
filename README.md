@@ -69,6 +69,8 @@ xcodebuild -downloadComponent MetalToolchain
 
 ### Build libghostty
 
+> **Important**: hiterm requires a [forked version of libghostty](https://github.com/hulryung/ghostty) that adds smooth pixel-level scrolling support at the GPU shader level. The upstream Ghostty does not yet include this feature. Once the Ghostty team ships native smooth scrolling ([Discussion #3206](https://github.com/ghostty-org/ghostty/discussions/3206)), hiterm will switch back to upstream.
+
 ```bash
 git clone https://github.com/hulryung/ghostty.git ../ghostty-src
 cd ../ghostty-src
@@ -103,6 +105,8 @@ Pre-built signed and notarized DMGs are available on the [Releases](https://gith
 hiterm wouldn't exist without [Ghostty](https://ghostty.org) and [libghostty](https://github.com/ghostty-org/ghostty) by [Mitchell Hashimoto](https://mitchellh.com) and the Ghostty contributors. They built an incredible terminal engine — fast, correct, and beautifully designed — and made it available for anyone to build on. The terminal emulation, Metal rendering, font shaping, and PTY handling that power hiterm are all libghostty. I just added the chrome on top.
 
 Massive respect to the Ghostty team for proving that terminals can be both technically excellent and a joy to use.
+
+This entire project was vibe-coded with [Claude Code](https://claude.ai/code) by Anthropic. Every single line — from the initial architecture to the final animation polish. Designing the smooth scroll approach, debugging IOSurfaceLayer quirks, rewriting the swipe tracker based on iTerm2 patterns, patching libghostty's shader pipeline, and everything in between. I don't write Swift. I don't write Zig. I couldn't have built any of this without Claude Code. It turned "I want a terminal that feels nice" into a working, signed, notarized macOS app.
 
 ## License
 
