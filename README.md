@@ -98,6 +98,12 @@ xcodebuild -scheme hiterm test
 
 Pre-built signed and notarized DMGs are available on the [Releases](https://github.com/hulryung/hiterm/releases) page. Apple Silicon (arm64) only.
 
+## Acknowledgments
+
+hiterm wouldn't exist without [Ghostty](https://ghostty.org) and [libghostty](https://github.com/ghostty-org/ghostty) by [Mitchell Hashimoto](https://mitchellh.com) and the Ghostty contributors. They built an incredible terminal engine — fast, correct, and beautifully designed — and made it available for anyone to build on. The terminal emulation, Metal rendering, font shaping, and PTY handling that power hiterm are all libghostty. I just added the chrome on top.
+
+Massive respect to the Ghostty team for proving that terminals can be both technically excellent and a joy to use.
+
 ## License
 
 This project is for personal use. libghostty is [MIT licensed](https://github.com/ghostty-org/ghostty/blob/main/LICENSE).
