@@ -278,9 +278,23 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
     }
 
     private var isAnimatingTabSwitch = false
+    private var keyAnimTimer: Timer?
+    private var keyAnimContainerView: NSView?
+    private var keyAnimBaseIndex: Int = 0  // index when container was created
+    private var keyAnimCurrentX: CGFloat = 0
+    private var keyAnimTargetIndex: Int = 0
 
     func selectTab(at index: Int, animated: Bool = true) {
-        guard index >= 0, index < tabs.count, !isAnimatingTabSwitch else { return }
+        guard index >= 0, index < tabs.count else { return }
+
+        if isAnimatingTabSwitch && animated {
+            // Already animating: just retarget.
+            keyAnimTargetIndex = index
+            currentTabIndex = index
+            tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
+            window?.title = tabs[index].title
+            return
+        }
 
         let previousIndex = currentTabIndex
         let oldSplit = (previousIndex < tabs.count) ? tabs[previousIndex].splitView : nil
@@ -289,50 +303,36 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         let containerWidth = contentContainerView.bounds.width
 
         if oldSplit !== newSplit || newSplit.superview == nil {
-            if animated, let oldSplit, oldSplit !== newSplit, containerWidth > 0 {
+            if animated, oldSplit !== newSplit, containerWidth > 0 {
                 isAnimatingTabSwitch = true
-                let goingRight = index > previousIndex
+                keyAnimBaseIndex = previousIndex
+                keyAnimTargetIndex = index
+                keyAnimCurrentX = 0
 
-                // Position new tab next to current tab.
-                newSplit.translatesAutoresizingMaskIntoConstraints = true
-                newSplit.frame = NSRect(
-                    x: goingRight ? containerWidth : -containerWidth,
+                // Create container with all tabs.
+                let height = contentContainerView.bounds.height
+                let container = NSView(frame: NSRect(
+                    x: -CGFloat(previousIndex) * containerWidth,
                     y: 0,
-                    width: containerWidth,
-                    height: contentContainerView.bounds.height
-                )
-                newSplit.autoresizingMask = [.height]
-                contentContainerView.addSubview(newSplit)
+                    width: containerWidth * CGFloat(tabs.count),
+                    height: height
+                ))
+                for (i, tab) in tabs.enumerated() {
+                    let sv = tab.splitView
+                    sv.removeFromSuperview()
+                    sv.translatesAutoresizingMaskIntoConstraints = true
+                    sv.frame = NSRect(x: CGFloat(i) * containerWidth, y: 0, width: containerWidth, height: height)
+                    sv.autoresizingMask = [.height]
+                    container.addSubview(sv)
+                }
+                contentContainerView.addSubview(container)
+                keyAnimContainerView = container
 
-                // Ensure old tab also uses frame positioning.
-                oldSplit.translatesAutoresizingMaskIntoConstraints = true
-                oldSplit.frame = NSRect(
-                    x: 0, y: 0,
-                    width: containerWidth,
-                    height: contentContainerView.bounds.height
-                )
-
-                // Animate bounds.origin.x to slide both tabs.
-                let targetX: CGFloat = goingRight ? containerWidth : -containerWidth
-                NSAnimationContext.runAnimationGroup({ context in
-                    context.duration = 0.3
-                    context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                    contentContainerView.animator().bounds.origin.x = targetX
-                }, completionHandler: { [weak self] in
-                    guard let self else { return }
-                    // Reset: remove old tab, reset bounds, position new tab properly.
-                    oldSplit.removeFromSuperview()
-                    self.contentContainerView.bounds.origin.x = 0
-
-                    newSplit.translatesAutoresizingMaskIntoConstraints = false
-                    NSLayoutConstraint.activate([
-                        newSplit.topAnchor.constraint(equalTo: self.contentContainerView.topAnchor),
-                        newSplit.leadingAnchor.constraint(equalTo: self.contentContainerView.leadingAnchor),
-                        newSplit.trailingAnchor.constraint(equalTo: self.contentContainerView.trailingAnchor),
-                        newSplit.bottomAnchor.constraint(equalTo: self.contentContainerView.bottomAnchor),
-                    ])
-                    self.isAnimatingTabSwitch = false
-                })
+                // Start timer-based animation.
+                keyAnimTimer?.invalidate()
+                keyAnimTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+                    self?.keyAnimTick()
+                }
             } else {
                 // No animation: just swap views.
                 if oldSplit !== newSplit {
@@ -355,6 +355,68 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
 
         window?.title = tabs[index].title
+    }
+
+    private func keyAnimTick() {
+        guard let container = keyAnimContainerView else {
+            finishKeyAnim()
+            return
+        }
+        let width = contentContainerView.bounds.width
+        guard width > 0 else { return }
+
+        // Target position: offset from base index to target index.
+        let targetX = CGFloat(keyAnimBaseIndex - keyAnimTargetIndex) * width
+        let distance = targetX - keyAnimCurrentX
+
+        if abs(distance) < 1.0 {
+            keyAnimCurrentX = targetX
+            container.frame.origin.x = -CGFloat(keyAnimBaseIndex) * width + keyAnimCurrentX
+            finishKeyAnim()
+            return
+        }
+
+        // Move 20% of remaining distance per frame (fast ease-out).
+        keyAnimCurrentX += distance * 0.2
+        container.frame.origin.x = -CGFloat(keyAnimBaseIndex) * width + keyAnimCurrentX
+
+        // Update tab bar when crossing halfway.
+        let visualOffset = -keyAnimCurrentX / width
+        let visualIndex = keyAnimBaseIndex + Int(visualOffset.rounded())
+        let clamped = max(0, min(tabs.count - 1, visualIndex))
+        if clamped != currentTabIndex {
+            currentTabIndex = clamped
+            tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
+            window?.title = tabs[clamped].title
+        }
+    }
+
+    private func finishKeyAnim() {
+        keyAnimTimer?.invalidate()
+        keyAnimTimer = nil
+
+        let targetIndex = keyAnimTargetIndex
+        let targetSplit = tabs[targetIndex].splitView
+
+        targetSplit.removeFromSuperview()
+        targetSplit.translatesAutoresizingMaskIntoConstraints = false
+        contentContainerView.addSubview(targetSplit)
+        NSLayoutConstraint.activate([
+            targetSplit.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
+            targetSplit.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
+            targetSplit.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
+            targetSplit.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
+        ])
+
+        keyAnimContainerView?.removeFromSuperview()
+        keyAnimContainerView = nil
+        contentContainerView.bounds.origin.x = 0
+
+        currentTabIndex = targetIndex
+        isAnimatingTabSwitch = false
+        tabs[targetIndex].splitView.focusedSurface.map { window?.makeFirstResponder($0) }
+        tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
+        window?.title = tabs[targetIndex].title
     }
 
     // MARK: - SwipeTrackerDelegate
