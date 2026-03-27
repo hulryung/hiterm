@@ -116,7 +116,11 @@ class TerminalSplitView: NSView {
             return
         }
 
-        // Animate: slide the closing pane off while keeping content fixed.
+        // Determine slide direction based on split direction and position.
+        let container = findParentContainer(of: surface, in: rootNode)
+        let isFirst = container.map { containsSurface(surface, in: $0.first) } ?? true
+        let direction = container?.direction ?? .horizontal
+
         let closingFrame = surface.frame
         surface.translatesAutoresizingMaskIntoConstraints = true
         surface.autoresizingMask = []
@@ -132,16 +136,14 @@ class TerminalSplitView: NSView {
             focusedSurface = firstLeaf
         }
 
-        // The closing surface is still in the view hierarchy (detached from tree).
-        // Animate it sliding away from its original position.
+        // Animate the closing surface sliding away.
         surface.frame = closingFrame
         surface.wantsLayer = true
         addSubview(surface)
 
         var progress: CGFloat = 0
         var timer: Timer?
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-            guard let self else { timer?.invalidate(); return }
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { _ in
             progress += 0.08
             if progress >= 1.0 {
                 timer?.invalidate()
@@ -150,10 +152,26 @@ class TerminalSplitView: NSView {
             }
             let ease = progress * progress
             surface.alphaValue = 1.0 - ease
-            // Slide in the direction of the nearest edge.
-            let dx = closingFrame.midX > self.bounds.midX ? closingFrame.width * 0.3 * ease : -closingFrame.width * 0.3 * ease
-            surface.frame.origin.x = closingFrame.origin.x + dx
+
+            switch direction {
+            case .horizontal:
+                // Left pane → slide left, right pane → slide right.
+                let dx = isFirst ? -closingFrame.width * 0.3 * ease : closingFrame.width * 0.3 * ease
+                surface.frame.origin.x = closingFrame.origin.x + dx
+            case .vertical:
+                // Top pane → slide up, bottom pane → slide down.
+                let dy = isFirst ? closingFrame.height * 0.3 * ease : -closingFrame.height * 0.3 * ease
+                surface.frame.origin.y = closingFrame.origin.y + dy
+            }
         }
+    }
+
+    private func findParentContainer(of surface: TerminalSurfaceView, in node: SplitNode) -> SplitContainer? {
+        guard case .split(let container) = node else { return nil }
+        if case .leaf(let s) = container.first, s === surface { return container }
+        if case .leaf(let s) = container.second, s === surface { return container }
+        return findParentContainer(of: surface, in: container.first)
+            ?? findParentContainer(of: surface, in: container.second)
     }
 
     func equalizeSplits() {
