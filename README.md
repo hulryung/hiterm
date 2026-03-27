@@ -2,29 +2,37 @@
 
 A macOS-native terminal emulator built on [libghostty](https://github.com/ghostty-org/ghostty).
 
-> **Note**: This is a personal project. I build software for my own use when existing tools don't quite fit my preferences. hiterm is no different — it's built to scratch my own itch, not to be a general-purpose terminal for everyone. Use at your own risk.
+## The Story
 
-## Why
+I'm a terminal power user. I spend most of my day staring at a terminal. And I got tired of terminals that *work fine* but don't *feel right*.
 
-I wanted a terminal emulator that:
+You know that feeling when you scroll a terminal and it jumps line by line? Or when you copy a wrapped line and it pastes with random newlines? Or when you swipe between tabs and nothing happens because terminals don't believe in gestures?
 
-- **Scrolls smoothly** — pixel-level, not line-by-line. Like scrolling a web page, not a 1980s VT100.
-- **Treats tabs as desktops** — entering fullscreen should send each tab to its own macOS Space, navigable with three-finger swipe.
-- **Supports two-finger swipe** for tab switching, like Safari.
-- **Splits panes** without friction.
-- **Copies wrapped lines correctly** — a single long line that wraps across multiple rows should copy as one line, not multiple lines with inserted newlines.
+I wanted a terminal that feels as polished as the apps around it. Smooth pixel-level scrolling. Fluid tab switching with trackpad gestures. Satisfying close animations. A settings UI that doesn't require editing a config file.
 
-No existing terminal did all of these the way I wanted, so I'm building one.
+This is not a terminal for everyone. This is a terminal for someone who obsesses over how things *feel*. Built for personal satisfaction — the kind of project where you spend an afternoon getting the pane close animation direction just right, because a pane on the left should slide left, not right.
+
+Call it terminal otaku. I'm okay with that.
+
+## Features
+
+- **Smooth pixel scrolling** — GPU shader-based, not line-by-line jumps (via [patched libghostty](https://github.com/hulryung/ghostty))
+- **Fluid tab switching** — two-finger trackpad swipe with continuous panning, or Cmd+Arrow with interruptible animation
+- **Split panes** — horizontal/vertical with per-pane focus and polished close animations
+- **Smart copy** — wrapped lines copy as a single line (libghostty handles soft-wrap detection)
+- **Korean/CJK IME** — full support for composing input with correct cursor positioning
+- **Dynamic tab titles** — shows current directory or running process name
+- **Settings UI** — font picker, 463 theme browser, opacity slider (Cmd+,)
+- **Fullscreen** — with logo and tab bar visible
 
 ## Architecture
 
 ```
 ┌──────────────────────────────────────────────┐
 │  hiterm (Swift / AppKit)                     │
-│                                              │
-│  UI Layer                                    │
-│  ├─ Tabs, split panes, gestures, fullscreen  │
-│  ├─ Smooth scroll (pixel offset on CALayer)  │
+│  ├─ Tabs, splits, gestures, animations       │
+│  ├─ Smooth scroll overlay                    │
+│  ├─ Settings UI (SwiftUI)                    │
 │  └─ Window management                        │
 │                                              │
 │  ──── import GhosttyKit (C ABI) ────         │
@@ -34,42 +42,11 @@ No existing terminal did all of these the way I wanted, so I'm building one.
 │  ├─ Metal GPU-accelerated rendering          │
 │  ├─ Font handling (FreeType + HarfBuzz)      │
 │  ├─ PTY management                           │
-│  └─ Kitty keyboard protocol                  │
+│  └─ Smooth scroll (shader-level pixel offset)│
 └──────────────────────────────────────────────┘
 ```
 
-hiterm is a thin UI shell on top of libghostty. The terminal engine — escape sequence parsing, rendering, font shaping, PTY — is all handled by libghostty. hiterm provides the macOS chrome: tabs, split panes, smooth scrolling, gestures, and window management.
-
-### Smooth Scrolling
-
-libghostty scrolls line-by-line internally. hiterm adds pixel-level smooth scrolling at the UI layer:
-
-1. Trackpad scroll events accumulate a pixel offset
-2. The Metal render layer is shifted by that offset via `CALayer.bounds.origin.y`
-3. When the offset exceeds one cell height, a line scroll is forwarded to libghostty
-4. On scroll stop, a spring animation snaps to the nearest line boundary
-
-### Fullscreen Tabs → Desktops
-
-When entering fullscreen, hiterm detaches each tab into a separate `NSWindow` with `collectionBehavior = .fullScreenPrimary`. macOS places each window in its own Space. Exiting fullscreen merges them back.
-
-## Features
-
-### MVP
-
-- [x] libghostty-powered terminal emulation
-- [ ] Pixel-level smooth scrolling
-- [ ] Tabs with custom tab bar
-- [ ] Horizontal / vertical split panes
-- [ ] Two-finger swipe tab switching
-- [ ] Semantic line copy (wrapped lines copy as a single line)
-- [ ] Fullscreen: each tab becomes its own macOS Space
-
-### Planned
-
-- [ ] Session management (SSH, serial)
-- [ ] SSH connection profiles
-- [ ] Serial port support (baud rate, parity, etc.)
+hiterm is a UI shell on top of libghostty. The terminal engine handles parsing, rendering, fonts, and PTY. hiterm provides the macOS experience: tabs, panes, gestures, animations, and settings.
 
 ## Tech Stack
 
@@ -77,7 +54,7 @@ When entering fullscreen, hiterm detaches each tab into a separate `NSWindow` wi
 |-----------|-----------|
 | Language | Swift |
 | UI | AppKit + SwiftUI |
-| Terminal engine | [libghostty](https://github.com/ghostty-org/ghostty) (Zig, C ABI, MIT) |
+| Terminal engine | [libghostty](https://github.com/hulryung/ghostty) fork (Zig, C ABI, MIT) |
 | Rendering | Metal (via libghostty) |
 | Build | Zig (libghostty) + xcodegen + Xcode (app) |
 
@@ -93,35 +70,33 @@ xcodebuild -downloadComponent MetalToolchain
 ### Build libghostty
 
 ```bash
-git clone --depth 1 https://github.com/ghostty-org/ghostty.git ../ghostty-src
+git clone https://github.com/hulryung/ghostty.git ../ghostty-src
 cd ../ghostty-src
-zig build -Dapp-runtime=none -Doptimize=ReleaseFast -Dsentry=false
+zig build -Dapp-runtime=none -Doptimize=ReleaseFast -Dsentry=false -Dtarget=aarch64-macos
 ```
 
-Copy artifacts:
+Copy the built library:
 
 ```bash
-cp zig-out/lib/libghostty.a ../hiterm/libs/GhosttyKit/
-cp include/ghostty.h ../hiterm/libs/GhosttyKit/include/
-cp include/module.modulemap ../hiterm/libs/GhosttyKit/include/
+./scripts/build-libghostty.sh
 ```
 
 ### Build hiterm
 
 ```bash
-cd hiterm
 xcodegen generate
 xcodebuild -scheme hiterm build
 ```
 
-Or open `hiterm.xcodeproj` in Xcode.
+### Run tests
 
-## Documentation
+```bash
+xcodebuild -scheme hiterm test
+```
 
-- [Requirements](docs/REQUIREMENTS.md) — what hiterm should do
-- [Architecture](docs/ARCHITECTURE.md) — how it's structured
-- [Build Guide](docs/BUILD.md) — detailed build instructions and troubleshooting
-- [Implementation Plan](docs/PLAN.md) — phased development roadmap
+## Download
+
+Pre-built signed and notarized DMGs are available on the [Releases](https://github.com/hulryung/hiterm/releases) page. Apple Silicon (arm64) only.
 
 ## License
 
