@@ -1,0 +1,27 @@
+included:
+  - hiterm
+  - hitermTests
+
+excluded:
+  - libs
+  - hiterm.xcodeproj
+
+disabled_rules:
+  - trailing_whitespace
+  - line_length
+  - type_body_length
+  - file_length
+  - function_body_length
+  - cyclomatic_complexity
+  - nesting
+  - identifier_name
+  - trailing_comma
+  - implicitly_unwrapped_optional
+  - large_tuple
+  - multiple_closures_with_trailing_closure
+
+opt_in_rules:
+  - empty_count
+
+force_cast: warning
+force_try: warning

@@ -96,7 +96,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
     private func createInitialTab() {
         swipeTracker.delegate = self
         let splitView = TerminalSplitView(ghosttyApp: ghosttyApp)
-        splitView.onSurfaceClosed = { [weak self] surface in
+        splitView.onSurfaceClosed = { [weak self] _ in
             self?.closeCurrentTab()
         }
         splitView.onTitleChanged = { [weak self] title in
@@ -228,7 +228,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
 
     func createNewTab() {
         let splitView = TerminalSplitView(ghosttyApp: ghosttyApp)
-        splitView.onSurfaceClosed = { [weak self] surface in
+        splitView.onSurfaceClosed = { [weak self] _ in
             self?.closeCurrentTab()
         }
         splitView.onTitleChanged = { [weak self] title in

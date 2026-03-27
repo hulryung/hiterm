@@ -22,6 +22,11 @@ targets:
       - script: |
           cp "${PROJECT_DIR}/hiterm/Resources/ghostty-config" "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config"
         name: Copy config resources
+      - script: |
+          if which swiftlint >/dev/null; then
+            cd "${PROJECT_DIR}" && swiftlint lint --config .swiftlint.yml hiterm || true
+          fi
+        name: SwiftLint
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hiterm.app
@@ -65,5 +70,26 @@ targets:
       path: hiterm/App/hiterm.entitlements
     preBuildScripts: []
     scheme:
-      testTargets: []
+      testTargets:
+        - hitermTests
       gatherCoverageData: false
+
+  hitermTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: hitermTests
+    dependencies:
+      - target: hiterm
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/hiterm.app/Contents/MacOS/hiterm"
+        HEADER_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/libs/GhosttyKit/include"
+        SWIFT_INCLUDE_PATHS:
+          - "$(PROJECT_DIR)/libs/GhosttyKit/include"
+        OTHER_SWIFT_FLAGS:
+          - "-Xcc"
+          - "-fmodule-map-file=$(PROJECT_DIR)/libs/GhosttyKit/include/module.modulemap"

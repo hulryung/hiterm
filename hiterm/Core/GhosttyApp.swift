@@ -46,11 +46,10 @@ class GhosttyApp {
             let app = Unmanaged<GhosttyApp>.fromOpaque(ud).takeUnretainedValue()
             return app.readClipboard(location: loc, state: state)
         }
-        runtime.confirm_read_clipboard_cb = { _, _, state, _ in
+        runtime.confirm_read_clipboard_cb = { _, _, _, _ in
             // Auto-confirm clipboard reads
-            guard let state else { return }
         }
-        runtime.write_clipboard_cb = { ud, loc, content, count, confirm in
+        runtime.write_clipboard_cb = { ud, loc, content, count, _ in
             guard let ud else { return }
             let app = Unmanaged<GhosttyApp>.fromOpaque(ud).takeUnretainedValue()
             app.writeClipboard(location: loc, content: content, count: count)

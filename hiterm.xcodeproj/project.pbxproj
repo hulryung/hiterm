@@ -17,13 +17,25 @@
 		C225DEB0A272641226D70968 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF04450FE71D8B46904AF809 /* MainWindowController.swift */; };
 		C49E9A1F7C74354AE9B22EC2 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D21751093EE69E62D873B364 /* main.swift */; };
 		E3D630AD9A035BF892C6CE42 /* SwipeTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E872008AD7E72FD2615BA7 /* SwipeTracker.swift */; };
+		EB94538A278D03A3194F0CB0 /* SplitNodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A998081965C45CC2C2173F /* SplitNodeTests.swift */; };
 		EBFBCB7720794CB29A06597D /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CC4A24FF2232A7ED3EF894 /* SettingsManager.swift */; };
 		F2BABA1A57C4EB4DD5A96BCA /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A7C29A9012257BE8DFDFE0 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		504FEE66CDD5169490CC2942 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7BAE8E04C4D29AFF7FC96FCC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E248387DAAD11712CD97C06E;
+			remoteInfo = hiterm;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		080149AB5FFF13E551CA4A5C /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		0FBB4EE1E20383112C0B9BFA /* ghostty-config */ = {isa = PBXFileReference; path = "ghostty-config"; sourceTree = "<group>"; };
+		26A40F0BEDDE6D6BE95F62CC /* hitermTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = hitermTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2AD270D5A30C5FA4E374F025 /* TerminalSurfaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSurfaceView.swift; sourceTree = "<group>"; };
 		33EDF6EE415A73BC86E5A6CD /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		568369CBB2D9A41F66B37F7F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -38,6 +50,7 @@
 		D3CC4A24FF2232A7ED3EF894 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		E3A7C29A9012257BE8DFDFE0 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E45B8D5494C54E79929A9F0D /* hiterm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hiterm.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E9A998081965C45CC2C2173F /* SplitNodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitNodeTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -62,6 +75,7 @@
 			isa = PBXGroup;
 			children = (
 				6E70504D9FB3BE5B026F45DC /* hiterm */,
+				A23A17777322C95C23E7001C /* hitermTests */,
 				9B2B0F76F49BC237C52EBEDD /* Products */,
 			);
 			sourceTree = "<group>";
@@ -100,8 +114,17 @@
 			isa = PBXGroup;
 			children = (
 				E45B8D5494C54E79929A9F0D /* hiterm.app */,
+				26A40F0BEDDE6D6BE95F62CC /* hitermTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A23A17777322C95C23E7001C /* hitermTests */ = {
+			isa = PBXGroup;
+			children = (
+				E9A998081965C45CC2C2173F /* SplitNodeTests.swift */,
+			);
+			path = hitermTests;
 			sourceTree = "<group>";
 		};
 		D97F848F70730C451A393676 /* Views */ = {
@@ -130,12 +153,31 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		C8C4FD2442B7B7B45CE2CFE6 /* hitermTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D74FA3A0E0227B5311C31D65 /* Build configuration list for PBXNativeTarget "hitermTests" */;
+			buildPhases = (
+				8AB06B7D52D01B32A94CBCAB /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B519428ACED205A389518CC5 /* PBXTargetDependency */,
+			);
+			name = hitermTests;
+			packageProductDependencies = (
+			);
+			productName = hitermTests;
+			productReference = 26A40F0BEDDE6D6BE95F62CC /* hitermTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		E248387DAAD11712CD97C06E /* hiterm */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0B04A2A9D5027BD7320AD63C /* Build configuration list for PBXNativeTarget "hiterm" */;
 			buildPhases = (
 				0FCFAFC2337A375A433006A9 /* Sources */,
 				EFB6C563A48BF3E51FB4464B /* Copy config resources */,
+				76CD059F28D9EFDC8A2369BF /* SwiftLint */,
 				F86B041787C739A1926A0C06 /* Resources */,
 			);
 			buildRules = (
@@ -175,6 +217,7 @@
 			projectRoot = "";
 			targets = (
 				E248387DAAD11712CD97C06E /* hiterm */,
+				C8C4FD2442B7B7B45CE2CFE6 /* hitermTests */,
 			);
 		};
 /* End PBXProject section */
@@ -191,6 +234,24 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		76CD059F28D9EFDC8A2369BF /* SwiftLint */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = SwiftLint;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  cd \"${PROJECT_DIR}\" && swiftlint lint --config .swiftlint.yml hiterm || true\nfi\n";
+		};
 		EFB6C563A48BF3E51FB4464B /* Copy config resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -230,7 +291,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8AB06B7D52D01B32A94CBCAB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EB94538A278D03A3194F0CB0 /* SplitNodeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B519428ACED205A389518CC5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E248387DAAD11712CD97C06E /* hiterm */;
+			targetProxy = 504FEE66CDD5169490CC2942 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		02463906AA1C9B38F3BB1D51 /* Release */ = {
@@ -276,6 +353,60 @@
 					"$(PROJECT_DIR)/libs/GhosttyKit/include",
 				);
 				SWIFT_OBJC_BRIDGING_HEADER = "";
+			};
+			name = Release;
+		};
+		0505C6447CF967CF8E141144 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/libs/GhosttyKit/include",
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				OTHER_SWIFT_FLAGS = (
+					"-Xcc",
+					"-fmodule-map-file=$(PROJECT_DIR)/libs/GhosttyKit/include/module.modulemap",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hiterm.hitermTests;
+				SDKROOT = macosx;
+				SWIFT_INCLUDE_PATHS = (
+					"$(PROJECT_DIR)/libs/GhosttyKit/include",
+				);
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hiterm.app/Contents/MacOS/hiterm";
+			};
+			name = Debug;
+		};
+		0EC23AF35F620DC723444085 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/libs/GhosttyKit/include",
+				);
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				OTHER_SWIFT_FLAGS = (
+					"-Xcc",
+					"-fmodule-map-file=$(PROJECT_DIR)/libs/GhosttyKit/include/module.modulemap",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hiterm.hitermTests;
+				SDKROOT = macosx;
+				SWIFT_INCLUDE_PATHS = (
+					"$(PROJECT_DIR)/libs/GhosttyKit/include",
+				);
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/hiterm.app/Contents/MacOS/hiterm";
 			};
 			name = Release;
 		};
@@ -461,6 +592,15 @@
 			buildConfigurations = (
 				BFC8A1C8740C2A3BFBA6DE31 /* Debug */,
 				E16A142FC6382E1E54557DA5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D74FA3A0E0227B5311C31D65 /* Build configuration list for PBXNativeTarget "hitermTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0505C6447CF967CF8E141144 /* Debug */,
+				0EC23AF35F620DC723444085 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
