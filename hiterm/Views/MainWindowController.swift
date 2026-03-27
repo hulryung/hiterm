@@ -227,7 +227,12 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
     }
 
     func createNewTab() {
-        let splitView = TerminalSplitView(ghosttyApp: ghosttyApp)
+        // Inherit config (including CWD) from the current tab's focused surface.
+        var inheritedConfig: ghostty_surface_config_s? = nil
+        if let currentSurface = currentTab?.splitView.focusedSurface?.surface {
+            inheritedConfig = ghostty_surface_inherited_config(currentSurface, GHOSTTY_SURFACE_CONTEXT_TAB)
+        }
+        let splitView = TerminalSplitView(ghosttyApp: ghosttyApp, baseConfig: inheritedConfig)
         splitView.onSurfaceClosed = { [weak self] _ in
             self?.closeCurrentTab()
         }

@@ -5,6 +5,7 @@ import GhosttyKit
 class TerminalSurfaceView: NSView, NSTextInputClient {
     private let ghosttyApp: GhosttyApp
     private(set) var surface: ghostty_surface_t?
+    private var baseConfig: ghostty_surface_config_s?
     var title: String = "hiterm" {
         didSet { onTitleChanged?(title) }
     }
@@ -14,8 +15,9 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     private var trackingArea: NSTrackingArea?
     private var markedText = NSMutableAttributedString()
 
-    init(ghosttyApp: GhosttyApp, frame: NSRect = NSRect(x: 0, y: 0, width: 800, height: 600)) {
+    init(ghosttyApp: GhosttyApp, baseConfig: ghostty_surface_config_s? = nil, frame: NSRect = NSRect(x: 0, y: 0, width: 800, height: 600)) {
         self.ghosttyApp = ghosttyApp
+        self.baseConfig = baseConfig
         super.init(frame: frame)
         wantsLayer = true
         layer?.isOpaque = true
@@ -93,7 +95,8 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     }
 
     private func createSurface(app: ghostty_app_t) {
-        var cfg = ghostty_surface_config_new()
+        var cfg = baseConfig ?? ghostty_surface_config_new()
+
         cfg.platform_tag = GHOSTTY_PLATFORM_MACOS
         cfg.platform.macos.nsview = Unmanaged.passUnretained(self).toOpaque()
         cfg.userdata = Unmanaged.passUnretained(self).toOpaque()
@@ -105,11 +108,11 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         }
 
         cfg.font_size = 0 // use config default
-        cfg.context = GHOSTTY_SURFACE_CONTEXT_WINDOW
 
-        // Inject PROMPT_COMMAND for bash to report title on every prompt.
-        // This enables automatic tab title updates on cd, command execution, etc.
-        let promptCmd = #"printf "\e]0;%s\a" "${PWD##*/}""#
+        // Inject PROMPT_COMMAND for bash:
+        // - OSC 7: report working directory to libghostty (enables CWD inheritance for new tabs/splits)
+        // - OSC 0: set tab title to current directory name
+        let promptCmd = #"printf "\e]7;file://%s%s\a" "$HOSTNAME" "$PWD"; printf "\e]0;%s\a" "${PWD##*/}""#
         let envKey = "PROMPT_COMMAND"
         self.surface = promptCmd.withCString { promptCStr in
             envKey.withCString { keyCStr in
@@ -121,6 +124,7 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
                 }
             }
         }
+        baseConfig = nil // consumed
 
         if let surface {
             updateSurfaceSize()

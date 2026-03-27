@@ -49,9 +49,9 @@ class TerminalSplitView: NSView {
         return false
     }
 
-    init(ghosttyApp: GhosttyApp, frame: NSRect = NSRect(x: 0, y: 0, width: 800, height: 600)) {
+    init(ghosttyApp: GhosttyApp, baseConfig: ghostty_surface_config_s? = nil, frame: NSRect = NSRect(x: 0, y: 0, width: 800, height: 600)) {
         self.ghosttyApp = ghosttyApp
-        let surface = TerminalSurfaceView(ghosttyApp: ghosttyApp, frame: frame)
+        let surface = TerminalSurfaceView(ghosttyApp: ghosttyApp, baseConfig: baseConfig, frame: frame)
         self.rootNode = .leaf(surface)
         super.init(frame: frame)
         addSubview(surface)
@@ -75,7 +75,12 @@ class TerminalSplitView: NSView {
 
     func split(direction: SplitContainer.Direction) {
         guard let focused = focusedSurface else { return }
-        let newSurface = TerminalSurfaceView(ghosttyApp: ghosttyApp)
+        // Inherit config (including CWD) from the focused surface.
+        var inheritedConfig: ghostty_surface_config_s? = nil
+        if let focusedSurface = focused.surface {
+            inheritedConfig = ghostty_surface_inherited_config(focusedSurface, GHOSTTY_SURFACE_CONTEXT_SPLIT)
+        }
+        let newSurface = TerminalSurfaceView(ghosttyApp: ghosttyApp, baseConfig: inheritedConfig)
         newSurface.onClosed = { [weak self, weak newSurface] in
             guard let self, let newSurface else { return }
             self.handleSurfaceClosed(newSurface)
