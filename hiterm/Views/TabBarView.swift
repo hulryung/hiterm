@@ -8,8 +8,13 @@ class TabBarView: NSView {
 
     private var tabButtons: [TabButton] = []
     private let newTabButton = NSButton()
-    private let stackView = NSStackView()
     private var selectedIndex: Int = 0
+
+    private let leadingPad: CGFloat = 78
+    private let trailingPad: CGFloat = 36
+    private let tabSpacing: CGFloat = 2
+    private let maxTabWidth: CGFloat = 200
+    private let minTabWidth: CGFloat = 50
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -24,13 +29,6 @@ class TabBarView: NSView {
         wantsLayer = true
         layer?.backgroundColor = NSColor(red: 0.15, green: 0.15, blue: 0.16, alpha: 1.0).cgColor
 
-        stackView.orientation = .horizontal
-        stackView.spacing = 1
-        stackView.alignment = .centerY
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stackView)
-
-        // New tab button
         newTabButton.title = "+"
         newTabButton.bezelStyle = .inline
         newTabButton.isBordered = false
@@ -38,19 +36,38 @@ class TabBarView: NSView {
         newTabButton.contentTintColor = .secondaryLabelColor
         newTabButton.target = self
         newTabButton.action = #selector(newTabClicked)
-        newTabButton.translatesAutoresizingMaskIntoConstraints = false
         addSubview(newTabButton)
+    }
 
-        NSLayoutConstraint.activate([
-            stackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 78),
-            stackView.topAnchor.constraint(equalTo: topAnchor),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            stackView.trailingAnchor.constraint(lessThanOrEqualTo: newTabButton.leadingAnchor, constant: -4),
+    override func layout() {
+        super.layout()
+        layoutTabs()
+    }
 
-            newTabButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            newTabButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            newTabButton.widthAnchor.constraint(equalToConstant: 28),
-        ])
+    private func layoutTabs() {
+        let btnSize: CGFloat = 28
+        newTabButton.frame = NSRect(
+            x: bounds.width - btnSize - 8,
+            y: (bounds.height - btnSize) / 2,
+            width: btnSize,
+            height: btnSize
+        )
+
+        guard !tabButtons.isEmpty else { return }
+        let count = CGFloat(tabButtons.count)
+        let available = bounds.width - leadingPad - trailingPad - tabSpacing * (count - 1)
+        let perTab = max(minTabWidth, min(maxTabWidth, available / count))
+        let tabHeight: CGFloat = 28
+        let tabY = (bounds.height - tabHeight) / 2
+
+        for (i, button) in tabButtons.enumerated() {
+            button.frame = NSRect(
+                x: leadingPad + CGFloat(i) * (perTab + tabSpacing),
+                y: tabY,
+                width: perTab,
+                height: tabHeight
+            )
+        }
     }
 
     func updateSelection(_ index: Int) {
@@ -65,11 +82,11 @@ class TabBarView: NSView {
         self.selectedIndex = selectedIndex
 
         if tabButtons.count == titles.count {
-            // Same number of tabs: update in-place (no flicker).
             for (i, button) in tabButtons.enumerated() {
                 button.updateTitle(titles[i])
                 button.updateSelected(i == selectedIndex)
             }
+            layoutTabs()
             return
         }
 
@@ -86,8 +103,9 @@ class TabBarView: NSView {
                 self?.onTabClosed?(idx)
             }
             tabButtons.append(button)
-            stackView.addArrangedSubview(button)
+            addSubview(button)
         }
+        layoutTabs()
     }
 
     @objc private func newTabClicked() {
@@ -128,7 +146,8 @@ class TabButton: NSView {
         titleLabel.font = .systemFont(ofSize: 12, weight: isSelected ? .medium : .regular)
         titleLabel.textColor = isSelected ? .white : NSColor(white: 0.55, alpha: 1.0)
         titleLabel.lineBreakMode = .byTruncatingTail
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.maximumNumberOfLines = 1
+        titleLabel.cell?.truncatesLastVisibleLine = true
         addSubview(titleLabel)
 
         closeButton.title = ""
@@ -139,28 +158,19 @@ class TabButton: NSView {
         closeButton.contentTintColor = .tertiaryLabelColor
         closeButton.target = self
         closeButton.action = #selector(closeTapped)
-        closeButton.translatesAutoresizingMaskIntoConstraints = false
         closeButton.isHidden = !isSelected
         addSubview(closeButton)
 
-        translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            widthAnchor.constraint(greaterThanOrEqualToConstant: 80),
-            widthAnchor.constraint(lessThanOrEqualToConstant: 200),
-            heightAnchor.constraint(equalToConstant: 28),
-
-            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 10),
-            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: closeButton.leadingAnchor, constant: -4),
-
-            closeButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -6),
-            closeButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            closeButton.widthAnchor.constraint(equalToConstant: 16),
-            closeButton.heightAnchor.constraint(equalToConstant: 16),
-        ])
-
         let click = NSClickGestureRecognizer(target: self, action: #selector(tabClicked))
         addGestureRecognizer(click)
+    }
+
+    override func layout() {
+        super.layout()
+        let h = bounds.height
+        let closeSize: CGFloat = 16
+        closeButton.frame = NSRect(x: bounds.width - closeSize - 6, y: (h - closeSize) / 2, width: closeSize, height: closeSize)
+        titleLabel.frame = NSRect(x: 10, y: 0, width: bounds.width - 36, height: h)
     }
 
     func updateTitle(_ title: String) {
@@ -170,8 +180,6 @@ class TabButton: NSView {
     func updateSelected(_ selected: Bool) {
         guard isSelected != selected else { return }
         isSelected = selected
-        NSAnimationContext.beginGrouping()
-        NSAnimationContext.current.duration = 0
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         layer?.backgroundColor = selected
@@ -180,7 +188,6 @@ class TabButton: NSView {
         titleLabel.textColor = selected ? .white : NSColor(white: 0.55, alpha: 1.0)
         closeButton.isHidden = !selected
         CATransaction.commit()
-        NSAnimationContext.endGrouping()
     }
 
     override func updateTrackingAreas() {
