@@ -299,9 +299,16 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
         window?.title = tabs[newIndex].title
 
-        // Animate closing tab sliding down.
+        // Move closing tab to window's contentView as an overlay
+        // (outside Auto Layout so it won't be resized during animation).
+        let frameInWindow = closingSplit.convert(closingSplit.bounds, to: window?.contentView)
+        closingSplit.removeFromSuperview()
         closingSplit.translatesAutoresizingMaskIntoConstraints = true
-        let startFrame = closingSplit.frame
+        closingSplit.frame = frameInWindow
+        closingSplit.autoresizingMask = []
+        window?.contentView?.addSubview(closingSplit)
+
+        // Animate closing tab sliding down + fade.
         var timer: Timer?
         var progress: CGFloat = 0
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
@@ -312,8 +319,8 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
                 newSplit.focusedSurface.map { self?.window?.makeFirstResponder($0) }
                 return
             }
-            let ease = progress * progress // ease-in
-            closingSplit.frame.origin.y = startFrame.origin.y - startFrame.height * ease
+            let ease = progress * progress
+            closingSplit.frame.origin.y = frameInWindow.origin.y - frameInWindow.height * ease
             closingSplit.alphaValue = 1.0 - ease
         }
     }
@@ -406,6 +413,10 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
                 }
             }
         }
+        // Force layout so the surface gets correct size immediately.
+        contentContainerView.layoutSubtreeIfNeeded()
+        newSplit.layoutSubtreeIfNeeded()
+
         newSplit.focusedSurface.map { window?.makeFirstResponder($0) }
         tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
 
@@ -470,6 +481,9 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         keyAnimContainerView?.removeFromSuperview()
         keyAnimContainerView = nil
         contentContainerView.bounds.origin.x = 0
+
+        contentContainerView.layoutSubtreeIfNeeded()
+        targetSplit.layoutSubtreeIfNeeded()
 
         currentTabIndex = targetIndex
         isAnimatingTabSwitch = false
