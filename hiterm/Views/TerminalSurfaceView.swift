@@ -109,18 +109,36 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
 
         cfg.font_size = 0 // use config default
 
-        // Inject PROMPT_COMMAND for bash:
-        // - OSC 7: report working directory to libghostty (enables CWD inheritance for new tabs/splits)
-        // - OSC 0: set tab title to current directory name
+        // Set up shell hooks for OSC 7 (CWD tracking) and OSC 0 (tab title).
+        // Both env vars are set so it works regardless of which shell launches:
+        //   - bash reads PROMPT_COMMAND, ignores ZDOTDIR
+        //   - zsh reads ZDOTDIR (.zshenv sets up precmd hooks), ignores PROMPT_COMMAND
         let promptCmd = #"printf "\e]7;file://%s%s\a" "$HOSTNAME" "$PWD"; printf "\e]0;%s\a" "${PWD##*/}""#
-        let envKey = "PROMPT_COMMAND"
+        let promptKey = "PROMPT_COMMAND"
+        let zdotdirKey = "ZDOTDIR"
+        let zdotdirBackupKey = "_HITERM_ZDOTDIR"
+        let zshIntegrationPath = Bundle.main.resourcePath.map { $0 + "/zsh-integration" } ?? ""
+        let originalZdotdir = ProcessInfo.processInfo.environment["ZDOTDIR"] ?? ""
+
         self.surface = promptCmd.withCString { promptCStr in
-            envKey.withCString { keyCStr in
-                var envVars = [ghostty_env_var_s(key: keyCStr, value: promptCStr)]
-                return envVars.withUnsafeMutableBufferPointer { buf in
-                    cfg.env_vars = buf.baseAddress
-                    cfg.env_var_count = 1
-                    return ghostty_surface_new(app, &cfg)
+            promptKey.withCString { promptKeyCStr in
+                zdotdirKey.withCString { zdotKeyCStr in
+                    zshIntegrationPath.withCString { zdotValCStr in
+                        zdotdirBackupKey.withCString { backupKeyCStr in
+                            originalZdotdir.withCString { backupValCStr in
+                                var envVars = [
+                                    ghostty_env_var_s(key: promptKeyCStr, value: promptCStr),
+                                    ghostty_env_var_s(key: zdotKeyCStr, value: zdotValCStr),
+                                    ghostty_env_var_s(key: backupKeyCStr, value: backupValCStr),
+                                ]
+                                return envVars.withUnsafeMutableBufferPointer { buf in
+                                    cfg.env_vars = buf.baseAddress
+                                    cfg.env_var_count = buf.count
+                                    return ghostty_surface_new(app, &cfg)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -1,2 +1,2 @@
-shell-integration = bash
-shell-integration-features = title
+shell-integration = none
+window-padding-y = 4

@@ -48,6 +48,7 @@
 		D0E4445BF957CED366D62099 /* hiterm.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = hiterm.entitlements; sourceTree = "<group>"; };
 		D21751093EE69E62D873B364 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D3CC4A24FF2232A7ED3EF894 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		DAC9EEDA5636D206454B874B /* .zshenv */ = {isa = PBXFileReference; path = .zshenv; sourceTree = "<group>"; };
 		E3A7C29A9012257BE8DFDFE0 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E45B8D5494C54E79929A9F0D /* hiterm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hiterm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9A998081965C45CC2C2173F /* SplitNodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitNodeTests.swift; sourceTree = "<group>"; };
@@ -69,6 +70,14 @@
 				C1E872008AD7E72FD2615BA7 /* SwipeTracker.swift */,
 			);
 			path = Input;
+			sourceTree = "<group>";
+		};
+		694BB922EB1FE9C1EDF069BE /* zsh-integration */ = {
+			isa = PBXGroup;
+			children = (
+				DAC9EEDA5636D206454B874B /* .zshenv */,
+			);
+			path = "zsh-integration";
 			sourceTree = "<group>";
 		};
 		69708F2B7DAA560439B9307B = {
@@ -106,6 +115,7 @@
 			isa = PBXGroup;
 			children = (
 				0FBB4EE1E20383112C0B9BFA /* ghostty-config */,
+				694BB922EB1FE9C1EDF069BE /* zsh-integration */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -268,7 +278,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cp \"${PROJECT_DIR}/hiterm/Resources/ghostty-config\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config\"\n";
+			shellScript = "cp \"${PROJECT_DIR}/hiterm/Resources/ghostty-config\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config\"\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/zsh-integration\"\ncp \"${PROJECT_DIR}/hiterm/Resources/zsh-integration/.zshenv\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/zsh-integration/.zshenv\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

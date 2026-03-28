@@ -21,6 +21,8 @@ targets:
     postCompileScripts:
       - script: |
           cp "${PROJECT_DIR}/hiterm/Resources/ghostty-config" "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config"
+          mkdir -p "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/zsh-integration"
+          cp "${PROJECT_DIR}/hiterm/Resources/zsh-integration/.zshenv" "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/zsh-integration/.zshenv"
         name: Copy config resources
       - script: |
           if which swiftlint >/dev/null; then
