@@ -6,17 +6,21 @@ A macOS-native terminal emulator built on libghostty.
 
 ```
 hiterm/
+├── ghostty/           # git submodule (hulryung/ghostty fork)
 ├── hiterm/
 │   ├── App/           # App entry point, AppDelegate
 │   ├── Core/          # GhosttyBridge, TerminalSurface, Config
 │   ├── Views/         # TabBarView, SplitView, SmoothScrollLayer, MainWindowController
 │   └── Input/         # KeyboardHandler, MouseHandler, GestureHandler
 ├── libs/
-│   └── GhosttyKit/    # libghostty static library + headers
+│   └── GhosttyKit/    # libghostty build output (gitignored .a)
 │       ├── include/
 │       │   ├── ghostty.h
 │       │   └── module.modulemap
-│       └── libghostty.a
+│       └── lib/
+│           └── libghostty.a
+├── scripts/
+│   └── build-libghostty.sh
 ├── docs/              # Requirements, architecture, build guide, implementation plan
 ├── project.yml        # xcodegen project spec
 └── CLAUDE.md
@@ -41,12 +45,16 @@ xcodebuild -downloadComponent MetalToolchain
 
 ### Build libghostty
 
+The Ghostty source is managed as a **git submodule** at `ghostty/`. Use the build script:
+
 ```bash
-cd ../ghostty-src
-zig build -Dapp-runtime=none -Doptimize=ReleaseFast -Dsentry=false
+git submodule update --init    # first time only
+./scripts/build-libghostty.sh
 ```
 
-Copy artifacts to `libs/GhosttyKit/`.
+This builds the full libghostty (Metal renderer, fonts, etc.) via xcframework and copies artifacts to `libs/GhosttyKit/`.
+
+**Note**: `-Demit-xcframework=true` is required. Without it, only `libghostty-vt.a` (~6MB, no renderer) is produced.
 
 ### Build hiterm
 
@@ -76,8 +84,8 @@ AppKit, Metal, CoreFoundation, CoreGraphics, CoreText, CoreVideo, QuartzCore, IO
 
 ## Ghostty Source Reference
 
-The Ghostty source at `../ghostty-src` is used as a reference. Key files:
-- `include/ghostty.h` — C API definition
-- `macos/Sources/Ghostty/Ghostty.App.swift` — App initialization pattern
-- `macos/Sources/Ghostty/Surface View/SurfaceView_AppKit.swift` — Surface/input handling pattern
-- `macos/Sources/Ghostty/Ghostty.Input.swift` — Modifier translation
+The Ghostty source is at `ghostty/` (submodule). Key files:
+- `ghostty/include/ghostty.h` — C API definition
+- `ghostty/macos/Sources/Ghostty/Ghostty.App.swift` — App initialization pattern
+- `ghostty/macos/Sources/Ghostty/Surface View/SurfaceView_AppKit.swift` — Surface/input handling pattern
+- `ghostty/macos/Sources/Ghostty/Ghostty.Input.swift` — Modifier translation

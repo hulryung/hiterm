@@ -19,8 +19,11 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         self.ghosttyApp = ghosttyApp
         self.baseConfig = baseConfig
         super.init(frame: frame)
-        wantsLayer = true
-        layer?.isOpaque = true
+        // Do NOT set wantsLayer = true here.
+        // libghostty's Metal renderer creates its own IOSurfaceLayer and sets
+        // view.layer BEFORE view.wantsLayer = true to make this a "layer-hosting"
+        // view. Setting wantsLayer early turns it into a "layer-backed" view,
+        // which conflicts with the IOSurfaceLayer setup.
 
         NotificationCenter.default.addObserver(
             self,
@@ -63,27 +66,40 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     private func updateSurfaceSize() {
         guard let surface else { return }
 
-        // Match Ghostty's approach: use convertToBacking for exact pixel dimensions.
-        let scaledSize = convertToBacking(bounds.size)
-        ghostty_surface_set_size(
-            surface,
-            UInt32(scaledSize.width),
-            UInt32(scaledSize.height)
-        )
+        // Match Ghostty's order: contentsScale first, then content scale, then size.
+        // This ensures the layer and renderer are consistent before grid recalculation.
 
-        // Set content scale from actual backing ratio (not just backingScaleFactor).
-        let fbFrame = convertToBacking(frame)
-        let xScale = frame.width > 0 ? fbFrame.width / frame.width : 2.0
-        let yScale = frame.height > 0 ? fbFrame.height / frame.height : 2.0
-        ghostty_surface_set_content_scale(surface, xScale, yScale)
-
-        // Ensure IOSurface layer is not scaled by the compositor.
+        // 1. Ensure the layer's contentsScale matches the backing scale factor
+        //    so Core Animation doesn't scale the IOSurface contents.
         if let window {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
             layer?.contentsScale = window.backingScaleFactor
             CATransaction.commit()
         }
+
+        // 2. Set content scale (DPI) — this may trigger font metric recalculation.
+        let fbFrame = convertToBacking(frame)
+        let xScale = frame.width > 0 ? fbFrame.width / frame.width : 2.0
+        let yScale = frame.height > 0 ? fbFrame.height / frame.height : 2.0
+        ghostty_surface_set_content_scale(surface, xScale, yScale)
+
+        // 3. Set framebuffer size — this triggers grid recalculation with current metrics.
+        let scaledSize = convertToBacking(bounds.size)
+        ghostty_surface_set_size(
+            surface,
+            UInt32(scaledSize.width),
+            UInt32(scaledSize.height)
+        )
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+
+        // When backing properties change (e.g., moved to a different DPI display),
+        // update the layer's contentsScale and re-send size/scale to libghostty.
+        // This matches Ghostty's SurfaceView_AppKit implementation.
+        updateSurfaceSize()
     }
 
     private func tryCreateSurface() {
