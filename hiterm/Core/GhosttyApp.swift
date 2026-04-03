@@ -9,9 +9,8 @@ class GhosttyApp {
     var isReady: Bool { app != nil }
 
     init() {
-        // Create and finalize config
+        // Create and finalize config — hiterm-only, do NOT load ghostty defaults.
         guard let cfg = ghostty_config_new() else { return }
-        ghostty_config_load_default_files(cfg)
 
         // Load hiterm-specific config (smooth scroll shader).
         if let configPath = Bundle.main.path(forResource: "ghostty-config", ofType: nil) {

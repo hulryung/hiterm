@@ -34,6 +34,9 @@ struct GeneralSettingsView: View {
     @AppStorage("shell") private var shell = "/bin/bash"
     @AppStorage("scrollbackLines") private var scrollbackLines = 10000
     @AppStorage("cursorStyle") private var cursorStyle = "block"
+    @State private var showImportConfirm = false
+    @State private var showImportResult = false
+    @State private var importSuccess = false
 
     var body: some View {
         Form {
@@ -64,8 +67,39 @@ struct GeneralSettingsView: View {
                     .frame(width: 240)
                 }
             }
+
+            Section("Import") {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Import from Ghostty")
+                        Text("~/.config/ghostty/config")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button("Import...") {
+                        showImportConfirm = true
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
+        .alert("Import Ghostty Settings", isPresented: $showImportConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Import", role: .destructive) {
+                importSuccess = SettingsManager.shared.importFromGhostty()
+                showImportResult = true
+            }
+        } message: {
+            Text("This will overwrite your current hiterm settings (font, theme, cursor, etc.) with values from Ghostty's config. This cannot be undone.")
+        }
+        .alert(importSuccess ? "Import Complete" : "Import Failed", isPresented: $showImportResult) {
+            Button("OK") {}
+        } message: {
+            Text(importSuccess
+                ? "Ghostty settings have been imported. Restart hiterm to apply all changes."
+                : "Could not find Ghostty config at ~/.config/ghostty/config")
+        }
     }
 }
 
