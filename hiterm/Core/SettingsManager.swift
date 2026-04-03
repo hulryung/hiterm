@@ -43,7 +43,10 @@ class SettingsManager {
         for key in keyMap.keys {
             defaults.publisher(for: key)
                 .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
-                .sink { [weak self] _ in self?.syncToConfig() }
+                .sink { [weak self] _ in
+                    guard let self, !self.suppressSync else { return }
+                    self.syncToConfig()
+                }
                 .store(in: &observers)
         }
 
@@ -53,35 +56,60 @@ class SettingsManager {
 
     /// Flag to prevent reload loops when we write the file ourselves.
     private var suppressFileWatch = false
+    /// Flag to prevent syncToConfig loops when reloadGhosttyConfig triggers UserDefaults changes.
+    private var suppressSync = false
 
     private func startFileWatcher() {
-        // Watch the directory, not the file — editors often replace files
-        // via rename (atomic save), which invalidates file descriptors.
-        let dir = (userConfigPath as NSString).deletingLastPathComponent
-        let fd = open(dir, O_EVTONLY)
+        let path = userConfigPath
+        let fd = open(path, O_EVTONLY)
         guard fd >= 0 else {
-            Log.config.error("File watcher: failed to open directory \(dir)")
+            Log.config.error("File watcher: failed to open \(path)")
             return
         }
 
-        Log.config.info("File watcher: watching directory \(dir) (fd=\(fd))")
+        Log.config.info("File watcher: watching \(path) (fd=\(fd))")
 
+        // Watch for write (in-place edit), delete, rename (atomic save), and revoke.
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
-            eventMask: .write,
+            eventMask: [.write, .delete, .rename, .revoke],
             queue: .main
         )
         source.setEventHandler { [weak self] in
             guard let self else { return }
+            let event = source.data
+            Log.config.debug("File watcher: event=\(event.rawValue)")
+
             if self.suppressFileWatch {
                 Log.config.debug("File watcher: event suppressed (self-write)")
+                // Still restart watcher if file was replaced.
+                if event.contains(.delete) || event.contains(.rename) {
+                    source.cancel()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        self.startFileWatcher()
+                    }
+                }
                 return
             }
+
             Log.config.info("File watcher: change detected, reloading config")
+            self.suppressSync = true
             self.reloadGhosttyConfig()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.suppressSync = false
+            }
+
+            // If the file was replaced (atomic save), restart the watcher
+            // on the new file since the old fd is now invalid.
+            if event.contains(.delete) || event.contains(.rename) {
+                Log.config.debug("File watcher: file replaced, restarting watcher")
+                source.cancel()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    self.startFileWatcher()
+                }
+            }
         }
         source.setCancelHandler {
-            Log.config.debug("File watcher: cancelled (fd=\(fd))")
             close(fd)
         }
         source.resume()
