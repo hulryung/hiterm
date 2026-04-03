@@ -6,6 +6,14 @@ class TabBarView: NSView {
     var onTabClosed: ((Int) -> Void)?
     var onNewTab: (() -> Void)?
 
+    override func mouseDown(with event: NSEvent) {
+        if event.clickCount == 2 {
+            window?.zoom(nil)
+            return
+        }
+        super.mouseDown(with: event)
+    }
+
     private var tabButtons: [TabButton] = []
     private let newTabButton = NSButton()
     private let logoIcon = NSImageView()
