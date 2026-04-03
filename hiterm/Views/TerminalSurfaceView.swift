@@ -244,6 +244,8 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
 
     /// Non-nil when inside keyDown; collects text from insertText during interpretKeyEvents.
     private var keyTextAccumulator: [String]?
+    /// Set by doCommand(by:) when insertNewline: fires during IME composition.
+    private var pendingNewline = false
 
     override func keyDown(with event: NSEvent) {
         guard let surface else {
@@ -267,6 +269,13 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
             // IME produced composed text — send each piece via ghostty_surface_key.
             for text in list {
                 keyAction(action, event: event, text: text, composing: false)
+            }
+            // If the IME also triggered insertNewline: (e.g. Korean Enter),
+            // send a separate Enter key event so both the committed text and
+            // the newline reach the PTY.
+            if pendingNewline {
+                pendingNewline = false
+                keyAction(action, event: event, text: nil, composing: false)
             }
         } else {
             // No composed text — send raw key event.
@@ -295,7 +304,13 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     }
 
     override func doCommand(by selector: Selector) {
-        // Suppress NSBeep for unhandled selectors (e.g., insertNewline: for Enter).
+        // When the Korean IME commits text with Enter, interpretKeyEvents
+        // calls insertText (committed text) followed by doCommandBySelector
+        // with insertNewline:.  Record the pending newline so keyDown can
+        // send a separate Enter event after the committed text.
+        if selector == #selector(insertNewline(_:)), keyTextAccumulator != nil {
+            pendingNewline = true
+        }
     }
 
     /// Build and send a key event to libghostty.
