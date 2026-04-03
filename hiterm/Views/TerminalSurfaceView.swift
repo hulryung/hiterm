@@ -91,6 +91,9 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
             UInt32(scaledSize.width),
             UInt32(scaledSize.height)
         )
+
+        let cs = Double(self.layer?.contentsScale ?? 0)
+        Log.surface.debug("updateSurfaceSize: \(Int(scaledSize.width))x\(Int(scaledSize.height))px, scale=\(xScale, format: .fixed(precision: 1)), contentsScale=\(cs, format: .fixed(precision: 1))")
     }
 
     override func viewDidChangeBackingProperties() {
@@ -99,6 +102,7 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         // When backing properties change (e.g., moved to a different DPI display),
         // update the layer's contentsScale and re-send size/scale to libghostty.
         // This matches Ghostty's SurfaceView_AppKit implementation.
+        Log.surface.debug("viewDidChangeBackingProperties")
         updateSurfaceSize()
     }
 
@@ -111,6 +115,7 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     }
 
     private func createSurface(app: ghostty_app_t) {
+        Log.surface.info("Creating surface (bounds: \(Int(self.bounds.width))x\(Int(self.bounds.height)))")
         var cfg = baseConfig ?? ghostty_surface_config_new()
 
         cfg.platform_tag = GHOSTTY_PLATFORM_MACOS
@@ -163,6 +168,9 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         if let surface {
             updateSurfaceSize()
             ghostty_surface_set_focus(surface, true)
+            Log.surface.info("Surface created successfully")
+        } else {
+            Log.surface.error("ghostty_surface_new returned nil")
         }
     }
 

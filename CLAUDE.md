@@ -82,6 +82,54 @@ AppKit, Metal, CoreFoundation, CoreGraphics, CoreText, CoreVideo, QuartzCore, IO
 - libghostty C types are wrapped in Swift classes/structs in Core/
 - Callbacks from libghostty use `Unmanaged<T>` for userdata pointer bridging
 
+## Debugging
+
+hiterm uses Apple's unified logging (`os.Logger`) with per-module categories defined in `hiterm/Core/Log.swift`.
+
+### Log Categories
+
+| Category | Module | What it covers |
+|----------|--------|----------------|
+| `config` | SettingsManager | File watching, config sync/reload, import |
+| `surface` | TerminalSurfaceView | Surface creation, size/scale updates |
+| `input` | KeyboardHandler etc. | Key/mouse/gesture events |
+| `ui` | Window/Tab/Split views | Window management, tabs, splits |
+| `ghostty` | GhosttyApp | App lifecycle, actions, callbacks |
+
+### Viewing Logs
+
+```bash
+# All hiterm logs (debug level)
+log stream --predicate 'subsystem=="com.hiterm.app"' --level debug
+
+# Single module only
+log stream --predicate 'subsystem=="com.hiterm.app" && category=="config"' --level debug
+log stream --predicate 'subsystem=="com.hiterm.app" && category=="surface"' --level debug
+
+# Multiple modules
+log stream --predicate 'subsystem=="com.hiterm.app" && (category=="config" || category=="surface")' --level debug
+```
+
+### Verbose Mode (Environment Variable)
+
+```bash
+# Verbose logging for specific modules
+HITERM_DEBUG=config,surface open hiterm.app
+
+# All modules verbose
+HITERM_DEBUG=all open hiterm.app
+```
+
+Check verbose flag in code: `Log.isVerbose("config")`
+
+### Adding New Logs
+
+```swift
+Log.config.debug("Detail message")     // debug: filtered by default, zero cost in Release
+Log.config.info("Important event")     // info: visible in log stream
+Log.config.error("Something failed")   // error: always visible
+```
+
 ## Ghostty Source Reference
 
 The Ghostty source is at `ghostty/` (submodule). Key files:

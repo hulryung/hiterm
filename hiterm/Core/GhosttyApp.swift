@@ -9,8 +9,12 @@ class GhosttyApp {
     var isReady: Bool { app != nil }
 
     init() {
+        Log.ghostty.info("GhosttyApp init starting")
         // Create and finalize config — hiterm-only, do NOT load ghostty defaults.
-        guard let cfg = ghostty_config_new() else { return }
+        guard let cfg = ghostty_config_new() else {
+            Log.ghostty.error("ghostty_config_new() failed")
+            return
+        }
 
         // Load hiterm-specific config (smooth scroll shader).
         if let configPath = Bundle.main.path(forResource: "ghostty-config", ofType: nil) {
@@ -66,6 +70,11 @@ class GhosttyApp {
         }
 
         self.app = ghostty_app_new(&runtime, cfg)
+        if self.app != nil {
+            Log.ghostty.info("GhosttyApp init complete")
+        } else {
+            Log.ghostty.error("ghostty_app_new() returned nil")
+        }
     }
 
     deinit {

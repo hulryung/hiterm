@@ -8,6 +8,7 @@ class SettingsManager {
     static let shared = SettingsManager()
 
     private var observers: [AnyCancellable] = []
+    private var fileWatcher: DispatchSourceFileSystemObject?
 
     /// Path to hiterm's user settings config file (~/.config/hiterm/config).
     var userConfigPath: String {
@@ -35,6 +36,8 @@ class SettingsManager {
             FileManager.default.createFile(atPath: userConfigPath, contents: nil)
         }
 
+        Log.config.info("Config path: \(self.userConfigPath)")
+
         // Listen for UserDefaults changes on our keys.
         let defaults = UserDefaults.standard
         for key in keyMap.keys {
@@ -43,6 +46,46 @@ class SettingsManager {
                 .sink { [weak self] _ in self?.syncToConfig() }
                 .store(in: &observers)
         }
+
+        // Watch config file for external edits.
+        startFileWatcher()
+    }
+
+    /// Flag to prevent reload loops when we write the file ourselves.
+    private var suppressFileWatch = false
+
+    private func startFileWatcher() {
+        // Watch the directory, not the file — editors often replace files
+        // via rename (atomic save), which invalidates file descriptors.
+        let dir = (userConfigPath as NSString).deletingLastPathComponent
+        let fd = open(dir, O_EVTONLY)
+        guard fd >= 0 else {
+            Log.config.error("File watcher: failed to open directory \(dir)")
+            return
+        }
+
+        Log.config.info("File watcher: watching directory \(dir) (fd=\(fd))")
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: .write,
+            queue: .main
+        )
+        source.setEventHandler { [weak self] in
+            guard let self else { return }
+            if self.suppressFileWatch {
+                Log.config.debug("File watcher: event suppressed (self-write)")
+                return
+            }
+            Log.config.info("File watcher: change detected, reloading config")
+            self.reloadGhosttyConfig()
+        }
+        source.setCancelHandler {
+            Log.config.debug("File watcher: cancelled (fd=\(fd))")
+            close(fd)
+        }
+        source.resume()
+        fileWatcher = source
     }
 
     /// Keys managed by the Settings UI — these are always written from @AppStorage.
@@ -116,9 +159,18 @@ class SettingsManager {
             lines.append(contentsOf: extra)
         }
 
-        // Write config file.
+        // Write config file (suppress file watcher to avoid reload loop).
         let content = lines.joined(separator: "\n") + "\n"
-        try? content.write(toFile: userConfigPath, atomically: true, encoding: .utf8)
+        suppressFileWatch = true
+        do {
+            try content.write(toFile: userConfigPath, atomically: true, encoding: .utf8)
+            Log.config.info("syncToConfig: wrote \(lines.count) lines to config")
+        } catch {
+            Log.config.error("syncToConfig: failed to write config: \(error)")
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.suppressFileWatch = false
+        }
 
         // Reload ghostty config.
         reloadGhosttyConfig()
@@ -127,9 +179,15 @@ class SettingsManager {
     /// Reload ghostty config from files and apply to the running app.
     func reloadGhosttyConfig() {
         guard let appDelegate = NSApp.delegate as? AppDelegate,
-              let ghosttyApp = appDelegate.ghosttyAppInstance else { return }
+              let ghosttyApp = appDelegate.ghosttyAppInstance else {
+            Log.config.warning("reloadGhosttyConfig: app delegate or ghostty app not available")
+            return
+        }
 
-        guard let cfg = ghostty_config_new() else { return }
+        guard let cfg = ghostty_config_new() else {
+            Log.config.error("reloadGhosttyConfig: ghostty_config_new() failed")
+            return
+        }
 
         // Load our bundle config (shader settings) — no ghostty defaults.
         if let bundleConfig = Bundle.main.path(forResource: "ghostty-config", ofType: nil) {
@@ -143,6 +201,7 @@ class SettingsManager {
 
         if let app = ghosttyApp.app {
             ghostty_app_update_config(app, cfg)
+            Log.config.info("reloadGhosttyConfig: config applied to running app")
         }
 
         ghostty_config_free(cfg)
@@ -184,6 +243,7 @@ class SettingsManager {
 
         try? FileManager.default.copyItem(atPath: oldPath, toPath: newPath)
         try? FileManager.default.removeItem(atPath: oldPath)
+        Log.config.info("Migrated config from \(oldPath) to \(newPath)")
     }
 
     /// Path to Ghostty's user config file.
@@ -253,6 +313,7 @@ class SettingsManager {
             }
         }
 
+        Log.config.info("importFromGhostty: imported \(extraLines.count) extra settings from Ghostty")
         syncToConfig(extraLines: extraLines)
         return true
     }

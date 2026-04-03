@@ -68,6 +68,22 @@ struct GeneralSettingsView: View {
                 }
             }
 
+            Section("Config File") {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Edit config directly")
+                        Text("~/.config/hiterm/config")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button("Open in Editor") {
+                        let path = SettingsManager.shared.userConfigPath
+                        NSWorkspace.shared.open(URL(fileURLWithPath: path))
+                    }
+                }
+            }
+
             Section("Import") {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
