@@ -362,4 +362,5 @@ extension Notification.Name {
     static let hitermToggleSplitZoom = Notification.Name("hitermToggleSplitZoom")
     static let hitermMoveTab = Notification.Name("hitermMoveTab")
     static let hitermResetWindowSize = Notification.Name("hitermResetWindowSize")
+    static let hitermConfigReloaded = Notification.Name("hitermConfigReloaded")
 }

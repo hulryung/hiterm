@@ -42,6 +42,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         setupViews()
         createInitialTab()
         setupNotifications()
+        applyWindowOpacity()
     }
 
     required init?(coder: NSCoder) {
@@ -217,6 +218,53 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
                 self?.window?.center()
             }
         )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+            ) { [weak self] _ in self?.applyWindowOpacity() }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
+                forName: .hitermConfigReloaded, object: nil, queue: .main
+            ) { [weak self] _ in self?.forceWindowRecomposite() }
+        )
+    }
+
+    // MARK: - Window Opacity
+
+    private var lastAppliedOpacity: CGFloat = 1.0
+
+    private func applyWindowOpacity() {
+        guard let window else { return }
+        let raw = UserDefaults.standard.double(forKey: "windowOpacity")
+        let opacity = raw > 0 ? CGFloat(raw) : 1.0
+        guard opacity != lastAppliedOpacity else { return }
+        lastAppliedOpacity = opacity
+
+        if opacity < 1.0 {
+            window.isOpaque = false
+            // Match Ghostty's approach: use near-transparent white instead of .clear
+            // for better compositing with Terminal.app-like appearance.
+            window.backgroundColor = .white.withAlphaComponent(0.001)
+        } else {
+            window.isOpaque = true
+            window.backgroundColor = NSColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
+        }
+        window.invalidateShadow()
+        tabBarView.setOpacity(opacity)
+    }
+
+    /// Force macOS to re-composite a transparent window.
+    /// Without this toggle, the window server can show stale compositing.
+    /// (Same pattern as Ghostty's TerminalController.fixTabBar)
+    private func forceWindowRecomposite() {
+        guard let window, !window.isOpaque else { return }
+        window.isOpaque = true
+        window.isOpaque = false
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        forceWindowRecomposite()
     }
 
     // MARK: - Tab Management

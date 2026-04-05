@@ -26,6 +26,7 @@ class TabBarView: NSView {
     private let tabSpacing: CGFloat = 2
     private let maxTabWidth: CGFloat = 200
     private let minTabWidth: CGFloat = 50
+    private var currentOpacity: CGFloat = 1.0
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -119,6 +120,14 @@ class TabBarView: NSView {
         layoutTabs()
     }
 
+    func setOpacity(_ opacity: CGFloat) {
+        currentOpacity = opacity
+        layer?.backgroundColor = NSColor(red: 0.15, green: 0.15, blue: 0.16, alpha: opacity).cgColor
+        for button in tabButtons {
+            button.setOpacity(opacity)
+        }
+    }
+
     func updateSelection(_ index: Int) {
         guard index != selectedIndex else { return }
         selectedIndex = index
@@ -145,6 +154,7 @@ class TabBarView: NSView {
 
         for (i, title) in titles.enumerated() {
             let button = TabButton(title: title, index: i, isSelected: i == selectedIndex)
+            button.setOpacity(currentOpacity)
             button.onSelected = { [weak self] idx in
                 self?.onTabSelected?(idx)
             }
@@ -172,6 +182,7 @@ class TabButton: NSView {
     private(set) var isSelected: Bool
     private let titleLabel = NSTextField(labelWithString: "")
     private let closeButton = NSButton()
+    private var currentOpacity: CGFloat = 1.0
 
     init(title: String, index: Int, isSelected: Bool) {
         self.index = index
@@ -184,12 +195,26 @@ class TabButton: NSView {
         fatalError("init(coder:) not implemented")
     }
 
+    func setOpacity(_ opacity: CGFloat) {
+        currentOpacity = opacity
+        applyBackgroundColor()
+    }
+
+    private func applyBackgroundColor(hover: Bool = false) {
+        let alpha = currentOpacity
+        if isSelected {
+            layer?.backgroundColor = NSColor(red: 0.25, green: 0.25, blue: 0.27, alpha: alpha).cgColor
+        } else if hover {
+            layer?.backgroundColor = NSColor(red: 0.22, green: 0.22, blue: 0.23, alpha: alpha).cgColor
+        } else {
+            layer?.backgroundColor = NSColor(red: 0.18, green: 0.18, blue: 0.19, alpha: alpha).cgColor
+        }
+    }
+
     private func setup(title: String) {
         wantsLayer = true
         layer?.cornerRadius = 6
-        layer?.backgroundColor = isSelected
-            ? NSColor(red: 0.25, green: 0.25, blue: 0.27, alpha: 1.0).cgColor
-            : NSColor(red: 0.18, green: 0.18, blue: 0.19, alpha: 1.0).cgColor
+        applyBackgroundColor()
 
         titleLabel.stringValue = title
         titleLabel.font = .systemFont(ofSize: 12, weight: isSelected ? .medium : .regular)
@@ -233,9 +258,7 @@ class TabButton: NSView {
         isSelected = selected
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        layer?.backgroundColor = selected
-            ? NSColor(red: 0.25, green: 0.25, blue: 0.27, alpha: 1.0).cgColor
-            : NSColor(red: 0.18, green: 0.18, blue: 0.19, alpha: 1.0).cgColor
+        applyBackgroundColor()
         titleLabel.textColor = selected ? .white : NSColor(white: 0.55, alpha: 1.0)
         closeButton.isHidden = !selected
         CATransaction.commit()
@@ -254,14 +277,14 @@ class TabButton: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         if !isSelected {
-            layer?.backgroundColor = NSColor(red: 0.22, green: 0.22, blue: 0.23, alpha: 1.0).cgColor
+            applyBackgroundColor(hover: true)
         }
         closeButton.isHidden = false
     }
 
     override func mouseExited(with event: NSEvent) {
         if !isSelected {
-            layer?.backgroundColor = NSColor(red: 0.18, green: 0.18, blue: 0.19, alpha: 1.0).cgColor
+            applyBackgroundColor()
         }
         closeButton.isHidden = !isSelected
     }

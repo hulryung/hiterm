@@ -39,15 +39,29 @@ class SettingsManager {
         Log.config.info("Config path: \(self.userConfigPath)")
 
         // Listen for UserDefaults changes on our keys.
+        // Slider-driven keys (opacity) use DispatchQueue.main so the debounce
+        // fires during event-tracking runloop mode (i.e. while dragging a slider).
+        // Other keys use RunLoop.main with a longer debounce.
         let defaults = UserDefaults.standard
+        let fastKeys: Set<String> = ["windowOpacity"]
         for key in keyMap.keys {
-            defaults.publisher(for: key)
-                .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
-                .sink { [weak self] _ in
-                    guard let self, !self.suppressSync else { return }
-                    self.syncToConfig()
-                }
-                .store(in: &observers)
+            if fastKeys.contains(key) {
+                defaults.publisher(for: key)
+                    .debounce(for: .milliseconds(50), scheduler: DispatchQueue.main)
+                    .sink { [weak self] _ in
+                        guard let self, !self.suppressSync else { return }
+                        self.syncToConfig()
+                    }
+                    .store(in: &observers)
+            } else {
+                defaults.publisher(for: key)
+                    .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+                    .sink { [weak self] _ in
+                        guard let self, !self.suppressSync else { return }
+                        self.syncToConfig()
+                    }
+                    .store(in: &observers)
+            }
         }
 
         // Watch config file for external edits.
@@ -230,6 +244,7 @@ class SettingsManager {
         if let app = ghosttyApp.app {
             ghostty_app_update_config(app, cfg)
             Log.config.info("reloadGhosttyConfig: config applied to running app")
+            NotificationCenter.default.post(name: .hitermConfigReloaded, object: nil)
         }
 
         ghostty_config_free(cfg)
