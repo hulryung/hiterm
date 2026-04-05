@@ -198,6 +198,15 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         )
         observers.append(
             NotificationCenter.default.addObserver(
+                forName: .hitermGotoSplit, object: nil, queue: .main
+            ) { [weak self] notif in
+                guard let self,
+                      let direction = notif.userInfo?["direction"] as? ghostty_action_goto_split_e else { return }
+                self.currentTab?.splitView.navigateToSplit(direction: direction)
+            }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
                 forName: .hitermEqualizeSplits, object: nil, queue: .main
             ) { [weak self] _ in self?.currentTab?.splitView.equalizeSplits() }
         )

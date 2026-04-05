@@ -192,6 +192,74 @@ class TerminalSplitView: NSView {
         }
     }
 
+    func navigateToSplit(direction: ghostty_action_goto_split_e) {
+        guard let focused = focusedSurface else { return }
+
+        // Collect all leaf surfaces with their frames.
+        var leaves: [(surface: TerminalSurfaceView, frame: NSRect)] = []
+        collectLeaves(rootNode, into: &leaves)
+
+        guard leaves.count > 1 else { return }
+
+        // Handle previous/next as sequential navigation.
+        if direction == GHOSTTY_GOTO_SPLIT_PREVIOUS || direction == GHOSTTY_GOTO_SPLIT_NEXT {
+            guard let idx = leaves.firstIndex(where: { $0.surface === focused }) else { return }
+            let nextIdx: Int
+            if direction == GHOSTTY_GOTO_SPLIT_NEXT {
+                nextIdx = (idx + 1) % leaves.count
+            } else {
+                nextIdx = (idx - 1 + leaves.count) % leaves.count
+            }
+            focusedSurface = leaves[nextIdx].surface
+            return
+        }
+
+        // Directional navigation: find nearest neighbor in the requested direction.
+        let focusedFrame = focused.frame
+        let cx = focusedFrame.midX
+        let cy = focusedFrame.midY
+
+        var bestSurface: TerminalSurfaceView?
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+
+        for (surface, frame) in leaves {
+            guard surface !== focused else { continue }
+            let sx = frame.midX
+            let sy = frame.midY
+
+            let isCandidate: Bool
+            switch direction {
+            case GHOSTTY_GOTO_SPLIT_LEFT:  isCandidate = sx < cx
+            case GHOSTTY_GOTO_SPLIT_RIGHT: isCandidate = sx > cx
+            case GHOSTTY_GOTO_SPLIT_UP:    isCandidate = sy > cy  // AppKit: y increases upward
+            case GHOSTTY_GOTO_SPLIT_DOWN:  isCandidate = sy < cy
+            default: isCandidate = false
+            }
+
+            if isCandidate {
+                let dist = (sx - cx) * (sx - cx) + (sy - cy) * (sy - cy)
+                if dist < bestDistance {
+                    bestDistance = dist
+                    bestSurface = surface
+                }
+            }
+        }
+
+        if let target = bestSurface {
+            focusedSurface = target
+        }
+    }
+
+    private func collectLeaves(_ node: SplitNode, into leaves: inout [(surface: TerminalSurfaceView, frame: NSRect)]) {
+        switch node {
+        case .leaf(let surface):
+            leaves.append((surface: surface, frame: surface.frame))
+        case .split(let container):
+            collectLeaves(container.first, into: &leaves)
+            collectLeaves(container.second, into: &leaves)
+        }
+    }
+
     func resizeFocusedSplit(direction: ghostty_action_resize_split_direction_e, amount: CGFloat) {
         guard let focused = focusedSurface else { return }
         rootNode = adjustRatio(in: rootNode, near: focused, direction: direction, amount: amount)
