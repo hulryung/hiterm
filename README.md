@@ -18,9 +18,9 @@ This is not a terminal for everyone. This is a terminal for someone who obsesses
 
 Call it terminal otaku. I'm okay with that.
 
-## Theme Preview
+## Demo
 
-https://github.com/hulryung/hiterm/releases/download/v0.3.2/2026-04-05.20-25-14.mp4
+https://github.com/hulryung/hiterm/releases/download/v0.3.2/hiterm-demo.mp4
 
 ## Features
 
