@@ -15,8 +15,12 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         var title: String
     }
 
-    init(ghosttyApp: GhosttyApp) {
+    /// Tab to adopt instead of creating a new one.
+    private var pendingExistingTab: (splitView: TerminalSplitView, title: String)?
+
+    init(ghosttyApp: GhosttyApp, existingTab: (splitView: TerminalSplitView, title: String)? = nil) {
         self.ghosttyApp = ghosttyApp
+        self.pendingExistingTab = existingTab
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 600),
@@ -24,7 +28,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
             backing: .buffered,
             defer: false
         )
-        window.title = "hiterm"
+        window.title = existingTab?.title ?? "hiterm"
         window.minSize = NSSize(width: 400, height: 300)
         window.center()
         window.isReleasedWhenClosed = false
@@ -70,6 +74,9 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         tabBarView.onNewTab = { [weak self] in
             self?.createNewTab()
         }
+        tabBarView.onTabMoveToNewWindow = { [weak self] index in
+            self?.moveTabToNewWindow(at: index)
+        }
         contentView.addSubview(tabBarView)
 
         // Content container
@@ -96,7 +103,20 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
 
     private func createInitialTab() {
         swipeTracker.delegate = self
-        let splitView = TerminalSplitView(ghosttyApp: ghosttyApp)
+
+        let splitView: TerminalSplitView
+        let title: String
+
+        if let existing = pendingExistingTab {
+            // Adopt an existing tab from another window.
+            splitView = existing.splitView
+            title = existing.title
+            pendingExistingTab = nil
+        } else {
+            splitView = TerminalSplitView(ghosttyApp: ghosttyApp)
+            title = "Terminal"
+        }
+
         splitView.onSurfaceClosed = { [weak self] _ in
             self?.closeCurrentTab()
         }
@@ -111,7 +131,7 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
             surface.swipeTracker = swipeTracker
         }
 
-        let tab = TabItem(splitView: splitView, title: "Terminal")
+        let tab = TabItem(splitView: splitView, title: title)
         tabs.append(tab)
         selectTab(at: 0, animated: false)
         tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
@@ -335,6 +355,34 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         if index == currentTabIndex {
             window?.title = title
         }
+    }
+
+    func moveTabToNewWindow(at index: Int) {
+        guard index < tabs.count, tabs.count > 1 else { return }
+
+        let tab = tabs.remove(at: index)
+        let newIndex = min(index, tabs.count - 1)
+
+        // Remove the split view from this window's container.
+        tab.splitView.removeFromSuperview()
+
+        // Show the new current tab.
+        let newSplit = tabs[newIndex].splitView
+        newSplit.translatesAutoresizingMaskIntoConstraints = false
+        contentContainerView.addSubview(newSplit)
+        NSLayoutConstraint.activate([
+            newSplit.topAnchor.constraint(equalTo: contentContainerView.topAnchor),
+            newSplit.leadingAnchor.constraint(equalTo: contentContainerView.leadingAnchor),
+            newSplit.trailingAnchor.constraint(equalTo: contentContainerView.trailingAnchor),
+            newSplit.bottomAnchor.constraint(equalTo: contentContainerView.bottomAnchor),
+        ])
+        currentTabIndex = newIndex
+        tabBarView.updateTabs(titles: tabs.map(\.title), selectedIndex: currentTabIndex)
+        window?.title = tabs[newIndex].title
+
+        // Create a new window with the detached tab.
+        guard let delegate = NSApp.delegate as? AppDelegate else { return }
+        delegate.newWindowWithTab(splitView: tab.splitView, title: tab.title)
     }
 
     private func closeCurrentTab() {

@@ -5,6 +5,7 @@ class TabBarView: NSView {
     var onTabSelected: ((Int) -> Void)?
     var onTabClosed: ((Int) -> Void)?
     var onNewTab: (() -> Void)?
+    var onTabMoveToNewWindow: ((Int) -> Void)?
 
     override func mouseDown(with event: NSEvent) {
         if event.clickCount == 2 {
@@ -161,6 +162,9 @@ class TabBarView: NSView {
             button.onClosed = { [weak self] idx in
                 self?.onTabClosed?(idx)
             }
+            button.onMoveToNewWindow = { [weak self] idx in
+                self?.onTabMoveToNewWindow?(idx)
+            }
             tabButtons.append(button)
             addSubview(button)
         }
@@ -177,6 +181,7 @@ class TabBarView: NSView {
 class TabButton: NSView {
     var onSelected: ((Int) -> Void)?
     var onClosed: ((Int) -> Void)?
+    var onMoveToNewWindow: ((Int) -> Void)?
 
     private let index: Int
     private(set) var isSelected: Bool
@@ -295,5 +300,21 @@ class TabButton: NSView {
 
     @objc private func closeTapped() {
         onClosed?(index)
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        let menu = NSMenu()
+        let moveItem = NSMenuItem(title: "Move Tab to New Window", action: #selector(moveToNewWindowClicked), keyEquivalent: "")
+        moveItem.target = self
+        menu.addItem(moveItem)
+        menu.addItem(.separator())
+        let closeItem = NSMenuItem(title: "Close Tab", action: #selector(closeTapped), keyEquivalent: "")
+        closeItem.target = self
+        menu.addItem(closeItem)
+        NSMenu.popUpContextMenu(menu, with: event, for: self)
+    }
+
+    @objc private func moveToNewWindowClicked() {
+        onMoveToNewWindow?(index)
     }
 }

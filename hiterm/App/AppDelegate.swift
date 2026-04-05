@@ -44,6 +44,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         wc.showWindow(nil)
     }
 
+    func newWindowWithTab(splitView: TerminalSplitView, title: String) {
+        let wc = MainWindowController(ghosttyApp: ghosttyApp, existingTab: (splitView: splitView, title: title))
+        windowControllers.append(wc)
+        wc.showWindow(nil)
+    }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         return .terminateNow
     }
