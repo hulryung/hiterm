@@ -13,8 +13,6 @@ Phase 1-D  Split panes
     ↓
 Phase 1-E  Swipe tab switching
     ↓
-Phase 1-F  Fullscreen tabs as desktops
-    ↓
 Phase 2    Session management (SSH, Serial)
 ```
 
@@ -198,38 +196,6 @@ Switch tabs using two-finger horizontal swipe.
 - Two-finger swipe right → previous tab
 - Both tabs are visible during swipe
 - Releasing mid-swipe snaps back to original tab
-
----
-
-## Phase 1-F: Fullscreen Tabs as Desktops
-
-### Goal
-When entering fullscreen, each tab becomes an independent macOS Space.
-
-### Tasks
-
-1. **Enter fullscreen**
-   - Detach tabs from current window into individual NSWindows
-   - Set collectionBehavior = .fullScreenPrimary on each window
-   - Call toggleFullScreen()
-
-2. **Space separation**
-   - macOS places each fullscreen window in a separate Space
-   - 3-finger swipe navigates between Spaces (native OS behavior)
-
-3. **Exit fullscreen**
-   - Detect all detached windows
-   - Merge tabs back into a single window
-   - Restore original tab order
-
-4. **State management**
-   - Save tab order/state before entering fullscreen
-   - Restore on exit
-
-### Done Criteria
-- Entering fullscreen sends each tab to a separate Space
-- 3-finger swipe navigates between tabs (Spaces)
-- Exiting fullscreen merges tabs back together
 
 ---
 

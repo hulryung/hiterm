@@ -17,6 +17,7 @@
 		C041F963EAC6FA4FDE9ABF7E /* TabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E10561221C5F26E7D6C874E /* TabBarView.swift */; };
 		C225DEB0A272641226D70968 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF04450FE71D8B46904AF809 /* MainWindowController.swift */; };
 		C49E9A1F7C74354AE9B22EC2 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D21751093EE69E62D873B364 /* main.swift */; };
+		C7D9C16B1A78071EE9DAEAF2 /* SearchOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2984C8ED410A004E537302A /* SearchOverlayView.swift */; };
 		E3D630AD9A035BF892C6CE42 /* SwipeTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E872008AD7E72FD2615BA7 /* SwipeTracker.swift */; };
 		EB94538A278D03A3194F0CB0 /* SplitNodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A998081965C45CC2C2173F /* SplitNodeTests.swift */; };
 		EBFBCB7720794CB29A06597D /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CC4A24FF2232A7ED3EF894 /* SettingsManager.swift */; };
@@ -43,6 +44,7 @@
 		7AD5F995D29B9C2B0AFE0F82 /* GhosttyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyApp.swift; sourceTree = "<group>"; };
 		7E10561221C5F26E7D6C874E /* TabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarView.swift; sourceTree = "<group>"; };
 		9769B7213206E6881B2C5A60 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A2984C8ED410A004E537302A /* SearchOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchOverlayView.swift; sourceTree = "<group>"; };
 		A5F65FF5E61FC612F5F2B9DC /* SplitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitView.swift; sourceTree = "<group>"; };
 		AF04450FE71D8B46904AF809 /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
 		C1E872008AD7E72FD2615BA7 /* SwipeTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeTracker.swift; sourceTree = "<group>"; };
@@ -144,6 +146,7 @@
 			isa = PBXGroup;
 			children = (
 				AF04450FE71D8B46904AF809 /* MainWindowController.swift */,
+				A2984C8ED410A004E537302A /* SearchOverlayView.swift */,
 				A5F65FF5E61FC612F5F2B9DC /* SplitView.swift */,
 				7E10561221C5F26E7D6C874E /* TabBarView.swift */,
 				2AD270D5A30C5FA4E374F025 /* TerminalSurfaceView.swift */,
@@ -294,6 +297,7 @@
 				658CF8E15A3B0D92D51FEE73 /* GhosttyApp.swift in Sources */,
 				B7F2A423F68515F679B0DDA1 /* Log.swift in Sources */,
 				C225DEB0A272641226D70968 /* MainWindowController.swift in Sources */,
+				C7D9C16B1A78071EE9DAEAF2 /* SearchOverlayView.swift in Sources */,
 				EBFBCB7720794CB29A06597D /* SettingsManager.swift in Sources */,
 				BFFA000C7DD20C8745D3363C /* SettingsView.swift in Sources */,
 				A3F6A16307BD39DD2CFA3713 /* SettingsWindowController.swift in Sources */,
