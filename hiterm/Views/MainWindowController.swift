@@ -166,6 +166,24 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         )
         observers.append(
             NotificationCenter.default.addObserver(
+                forName: .hitermGotoTab, object: nil, queue: .main
+            ) { [weak self] notif in
+                guard let self,
+                      let tab = notif.userInfo?["tab"] as? ghostty_action_goto_tab_e else { return }
+                let rawValue = tab.rawValue
+                if rawValue == GHOSTTY_GOTO_TAB_PREVIOUS.rawValue {
+                    if self.currentTabIndex > 0 { self.selectTab(at: self.currentTabIndex - 1) }
+                } else if rawValue == GHOSTTY_GOTO_TAB_NEXT.rawValue {
+                    if self.currentTabIndex < self.tabs.count - 1 { self.selectTab(at: self.currentTabIndex + 1) }
+                } else if rawValue == GHOSTTY_GOTO_TAB_LAST.rawValue {
+                    self.selectTab(at: self.tabs.count - 1)
+                } else if rawValue >= 1, rawValue <= Int32(self.tabs.count) {
+                    self.selectTab(at: Int(rawValue) - 1)
+                }
+            }
+        )
+        observers.append(
+            NotificationCenter.default.addObserver(
                 forName: .hitermNewWindow, object: nil, queue: .main
             ) { _ in
                 if let delegate = NSApp.delegate as? AppDelegate {
