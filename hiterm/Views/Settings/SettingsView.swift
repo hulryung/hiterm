@@ -298,6 +298,64 @@ struct KeybindingRow: View {
 
 // MARK: - Searchable Picker (reusable)
 
+/// Manages keyboard navigation state for SearchablePicker.
+/// Uses a class so NSEvent monitor closures can read/write current state by reference.
+private class PickerKeyHandler: ObservableObject {
+    @Published var highlightedIndex = 0
+    @Published var scrollTarget: String?
+    var filteredItems: [String] = []
+    var onSelect: ((String) -> Void)?
+    var onDismiss: (() -> Void)?
+    private var monitor: Any?
+
+    func install() {
+        remove()
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, !self.filteredItems.isEmpty else { return event }
+
+            switch event.keyCode {
+            case 125: // Down arrow
+                let newIndex = min(self.highlightedIndex + 1, self.filteredItems.count - 1)
+                self.highlightedIndex = newIndex
+                self.onSelect?(self.filteredItems[newIndex])
+                self.scrollTarget = self.filteredItems[newIndex]
+                return nil
+            case 126: // Up arrow
+                let newIndex = max(self.highlightedIndex - 1, 0)
+                self.highlightedIndex = newIndex
+                self.onSelect?(self.filteredItems[newIndex])
+                self.scrollTarget = self.filteredItems[newIndex]
+                return nil
+            case 36: // Return
+                self.onDismiss?()
+                return nil
+            case 53: // Escape
+                self.onDismiss?()
+                return nil
+            default:
+                return event
+            }
+        }
+    }
+
+    func remove() {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+            self.monitor = nil
+        }
+    }
+
+    func syncHighlight(to selection: String) {
+        if let idx = filteredItems.firstIndex(of: selection) {
+            highlightedIndex = idx
+        } else {
+            highlightedIndex = 0
+        }
+    }
+
+    deinit { remove() }
+}
+
 struct SearchablePicker<RowContent: View>: View {
     @Binding var selection: String
     let items: [String]
@@ -306,6 +364,7 @@ struct SearchablePicker<RowContent: View>: View {
 
     @State private var searchText = ""
     @State private var isExpanded = false
+    @StateObject private var keyHandler = PickerKeyHandler()
 
     private var filteredItems: [String] {
         if searchText.isEmpty { return items }
@@ -315,7 +374,7 @@ struct SearchablePicker<RowContent: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Selected value button
-            Button(action: { withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() } }) {
+            Button(action: { toggleExpanded() }) {
                 HStack {
                     Text(selection)
                         .font(.system(size: 12))
@@ -350,11 +409,11 @@ struct SearchablePicker<RowContent: View>: View {
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: 0) {
-                                ForEach(filteredItems, id: \.self) { item in
+                                ForEach(Array(filteredItems.enumerated()), id: \.element) { index, item in
                                     Button(action: {
                                         selection = item
                                         searchText = ""
-                                        withAnimation(.easeInOut(duration: 0.15)) { isExpanded = false }
+                                        collapse()
                                     }) {
                                         HStack {
                                             rowContent(item)
@@ -370,15 +429,29 @@ struct SearchablePicker<RowContent: View>: View {
                                         .contentShape(Rectangle())
                                     }
                                     .buttonStyle(.plain)
-                                    .background(item == selection ? Color.accentColor.opacity(0.1) : Color.clear)
+                                    .background(
+                                        index == keyHandler.highlightedIndex
+                                            ? Color.accentColor.opacity(0.15)
+                                            : Color.clear
+                                    )
                                     .id(item)
                                 }
                             }
                         }
                         .onAppear {
+                            updateKeyHandler()
                             if filteredItems.contains(selection) {
                                 proxy.scrollTo(selection, anchor: .center)
                             }
+                        }
+                        .onChange(of: keyHandler.scrollTarget) { target in
+                            if let target {
+                                proxy.scrollTo(target, anchor: .center)
+                                keyHandler.scrollTarget = nil
+                            }
+                        }
+                        .onChange(of: searchText) { _ in
+                            updateKeyHandler()
                         }
                     }
                     .frame(maxHeight: 200)
@@ -393,5 +466,29 @@ struct SearchablePicker<RowContent: View>: View {
                 .padding(.top, 2)
             }
         }
+        .onDisappear { keyHandler.remove() }
+    }
+
+    private func updateKeyHandler() {
+        keyHandler.filteredItems = filteredItems
+        keyHandler.syncHighlight(to: selection)
+    }
+
+    private func toggleExpanded() {
+        withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
+        if isExpanded {
+            updateKeyHandler()
+            keyHandler.onSelect = { item in selection = item }
+            keyHandler.onDismiss = { collapse() }
+            keyHandler.install()
+        } else {
+            keyHandler.remove()
+        }
+    }
+
+    private func collapse() {
+        searchText = ""
+        withAnimation(.easeInOut(duration: 0.15)) { isExpanded = false }
+        keyHandler.remove()
     }
 }
