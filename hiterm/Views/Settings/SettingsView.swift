@@ -337,29 +337,37 @@ struct SearchablePicker<RowContent: View>: View {
                     Divider()
 
                     // Scrollable list
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0) {
-                            ForEach(filteredItems, id: \.self) { item in
-                                Button(action: {
-                                    selection = item
-                                    searchText = ""
-                                    withAnimation(.easeInOut(duration: 0.15)) { isExpanded = false }
-                                }) {
-                                    HStack {
-                                        rowContent(item)
-                                        Spacer()
-                                        if item == selection {
-                                            Image(systemName: "checkmark")
-                                                .font(.system(size: 10, weight: .bold))
-                                                .foregroundColor(.accentColor)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 0) {
+                                ForEach(filteredItems, id: \.self) { item in
+                                    Button(action: {
+                                        selection = item
+                                        searchText = ""
+                                        withAnimation(.easeInOut(duration: 0.15)) { isExpanded = false }
+                                    }) {
+                                        HStack {
+                                            rowContent(item)
+                                            Spacer()
+                                            if item == selection {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundColor(.accentColor)
+                                            }
                                         }
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .contentShape(Rectangle())
                                     }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .contentShape(Rectangle())
+                                    .buttonStyle(.plain)
+                                    .background(item == selection ? Color.accentColor.opacity(0.1) : Color.clear)
+                                    .id(item)
                                 }
-                                .buttonStyle(.plain)
-                                .background(item == selection ? Color.accentColor.opacity(0.1) : Color.clear)
+                            }
+                        }
+                        .onAppear {
+                            if filteredItems.contains(selection) {
+                                proxy.scrollTo(selection, anchor: .center)
                             }
                         }
                     }
