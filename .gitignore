@@ -17,6 +17,7 @@ xcuserdata/
 # libghostty artifacts
 libs/GhosttyKit/lib/*.a
 libs/GhosttyKit/lib/*.dylib
+libs/GhosttyKit/share/
 
 # macOS
 .DS_Store

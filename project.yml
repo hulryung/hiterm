@@ -23,6 +23,16 @@ targets:
           cp "${PROJECT_DIR}/hiterm/Resources/ghostty-config" "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config"
           mkdir -p "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/zsh-integration"
           cp "${PROJECT_DIR}/hiterm/Resources/zsh-integration/.zshenv" "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/zsh-integration/.zshenv"
+          # Copy ghostty resources (themes, terminfo) for runtime theme resolution.
+          GHOSTTY_SHARE="${PROJECT_DIR}/libs/GhosttyKit/share"
+          if [ -d "${GHOSTTY_SHARE}/ghostty/themes" ]; then
+            mkdir -p "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty/themes"
+            cp -R "${GHOSTTY_SHARE}/ghostty/themes/" "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty/themes/"
+          fi
+          if [ -d "${GHOSTTY_SHARE}/terminfo" ]; then
+            mkdir -p "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/terminfo"
+            cp -R "${GHOSTTY_SHARE}/terminfo/" "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/terminfo/"
+          fi
         name: Copy config resources
       - script: |
           if which swiftlint >/dev/null; then

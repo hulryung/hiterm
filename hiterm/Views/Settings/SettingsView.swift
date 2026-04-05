@@ -223,20 +223,30 @@ struct AppearanceSettingsView: View {
     }
 
     private func loadThemes() {
-        let searchPaths = [
-            NSHomeDirectory() + "/dev/ghostty-src/zig-out/share/ghostty/themes",
+        var searchPaths: [String] = []
+
+        // App bundle themes (bundled during build from libghostty resources).
+        if let bundlePath = Bundle.main.resourcePath {
+            searchPaths.append(bundlePath + "/ghostty/themes")
+        }
+
+        // User custom themes and system-installed ghostty themes.
+        searchPaths.append(contentsOf: [
             NSHomeDirectory() + "/.config/ghostty/themes",
             "/usr/local/share/ghostty/themes",
             "/opt/homebrew/share/ghostty/themes",
-        ]
+        ])
+
         for path in searchPaths {
             if let files = try? FileManager.default.contentsOfDirectory(atPath: path) {
-                themes = files.sorted()
-                return
+                let themeFiles = files.filter { !$0.hasPrefix(".") }
+                if !themeFiles.isEmpty {
+                    themes = themeFiles.sorted()
+                    return
+                }
             }
         }
-        themes = ["Dracula", "Solarized Dark", "Solarized Light", "Monokai",
-                   "Nord", "Gruvbox Dark", "Gruvbox Light", "One Dark", "Tokyo Night"]
+        themes = []
     }
 }
 

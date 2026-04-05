@@ -281,7 +281,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cp \"${PROJECT_DIR}/hiterm/Resources/ghostty-config\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config\"\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/zsh-integration\"\ncp \"${PROJECT_DIR}/hiterm/Resources/zsh-integration/.zshenv\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/zsh-integration/.zshenv\"\n";
+			shellScript = "cp \"${PROJECT_DIR}/hiterm/Resources/ghostty-config\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty-config\"\nmkdir -p \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/zsh-integration\"\ncp \"${PROJECT_DIR}/hiterm/Resources/zsh-integration/.zshenv\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/zsh-integration/.zshenv\"\n# Copy ghostty resources (themes, terminfo) for runtime theme resolution.\nGHOSTTY_SHARE=\"${PROJECT_DIR}/libs/GhosttyKit/share\"\nif [ -d \"${GHOSTTY_SHARE}/ghostty/themes\" ]; then\n  mkdir -p \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty/themes\"\n  cp -R \"${GHOSTTY_SHARE}/ghostty/themes/\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ghostty/themes/\"\nfi\nif [ -d \"${GHOSTTY_SHARE}/terminfo\" ]; then\n  mkdir -p \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/terminfo\"\n  cp -R \"${GHOSTTY_SHARE}/terminfo/\" \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/terminfo/\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
