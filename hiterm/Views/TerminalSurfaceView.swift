@@ -308,7 +308,8 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         // calls insertText (committed text) followed by doCommandBySelector
         // with insertNewline:.  Record the pending newline so keyDown can
         // send a separate Enter event after the committed text.
-        if selector == #selector(insertNewline(_:)), keyTextAccumulator != nil {
+        if selector == #selector(insertNewline(_:)),
+           let acc = keyTextAccumulator, !acc.isEmpty {
             pendingNewline = true
         }
     }
