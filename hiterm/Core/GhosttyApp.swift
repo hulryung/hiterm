@@ -301,6 +301,57 @@ class GhosttyApp {
         case GHOSTTY_ACTION_COMMAND_FINISHED:
             return true
 
+        case GHOSTTY_ACTION_START_SEARCH:
+            if target.tag == GHOSTTY_TARGET_SURFACE {
+                let surface = target.target.surface
+                let needle = action.action.start_search.needle.flatMap { String(cString: $0) } ?? ""
+                let surfaceUD = ghostty_surface_userdata(surface)
+                NotificationCenter.default.post(
+                    name: .hitermStartSearch,
+                    object: nil,
+                    userInfo: ["needle": needle, "userdata": surfaceUD as Any]
+                )
+            }
+            return true
+
+        case GHOSTTY_ACTION_END_SEARCH:
+            if target.tag == GHOSTTY_TARGET_SURFACE {
+                let surface = target.target.surface
+                let surfaceUD = ghostty_surface_userdata(surface)
+                NotificationCenter.default.post(
+                    name: .hitermEndSearch,
+                    object: nil,
+                    userInfo: ["userdata": surfaceUD as Any]
+                )
+            }
+            return true
+
+        case GHOSTTY_ACTION_SEARCH_TOTAL:
+            if target.tag == GHOSTTY_TARGET_SURFACE {
+                let surface = target.target.surface
+                let total = action.action.search_total.total
+                let surfaceUD = ghostty_surface_userdata(surface)
+                NotificationCenter.default.post(
+                    name: .hitermSearchTotal,
+                    object: nil,
+                    userInfo: ["total": total, "userdata": surfaceUD as Any]
+                )
+            }
+            return true
+
+        case GHOSTTY_ACTION_SEARCH_SELECTED:
+            if target.tag == GHOSTTY_TARGET_SURFACE {
+                let surface = target.target.surface
+                let selected = action.action.search_selected.selected
+                let surfaceUD = ghostty_surface_userdata(surface)
+                NotificationCenter.default.post(
+                    name: .hitermSearchSelected,
+                    object: nil,
+                    userInfo: ["selected": selected, "userdata": surfaceUD as Any]
+                )
+            }
+            return true
+
         default:
             return false
         }
@@ -363,4 +414,8 @@ extension Notification.Name {
     static let hitermMoveTab = Notification.Name("hitermMoveTab")
     static let hitermResetWindowSize = Notification.Name("hitermResetWindowSize")
     static let hitermConfigReloaded = Notification.Name("hitermConfigReloaded")
+    static let hitermStartSearch = Notification.Name("hitermStartSearch")
+    static let hitermEndSearch = Notification.Name("hitermEndSearch")
+    static let hitermSearchTotal = Notification.Name("hitermSearchTotal")
+    static let hitermSearchSelected = Notification.Name("hitermSearchSelected")
 }
