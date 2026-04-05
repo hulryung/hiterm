@@ -5,7 +5,7 @@ class SettingsWindowController: NSWindowController {
     static let shared = SettingsWindowController()
 
     private init() {
-        let window = NSWindow(
+        let window = SettingsWindow(
             contentRect: NSRect(x: 0, y: 0, width: 580, height: 500),
             styleMask: [.titled, .closable],
             backing: .buffered,
@@ -31,9 +31,16 @@ class SettingsWindowController: NSWindowController {
         super.showWindow(sender)
         window?.makeKeyAndOrderFront(nil)
     }
+}
 
-    // Close on Esc key.
-    override func cancelOperation(_ sender: Any?) {
-        window?.close()
+/// NSWindow subclass that closes on Esc.
+/// NSHostingView swallows key events, so we intercept before dispatch.
+private class SettingsWindow: NSWindow {
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, event.keyCode == 53 { // Esc
+            close()
+            return
+        }
+        super.sendEvent(event)
     }
 }
