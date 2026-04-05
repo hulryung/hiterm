@@ -11,6 +11,7 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     }
     var onTitleChanged: ((String) -> Void)?
     var onClosed: (() -> Void)?
+    private var searchOverlay: SearchOverlayView?
 
     private var trackingArea: NSTrackingArea?
     private var markedText = NSMutableAttributedString()
@@ -35,6 +36,30 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
             self,
             selector: #selector(handleCloseSurface(_:)),
             name: .hitermCloseSurface,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleStartSearch(_:)),
+            name: .hitermStartSearch,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleEndSearch(_:)),
+            name: .hitermEndSearch,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleSearchTotal(_:)),
+            name: .hitermSearchTotal,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleSearchSelected(_:)),
+            name: .hitermSearchSelected,
             object: nil
         )
     }
@@ -606,6 +631,65 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
         if flags.contains(.command) { mods |= GHOSTTY_MODS_SUPER.rawValue }
         if flags.contains(.capsLock) { mods |= GHOSTTY_MODS_CAPS.rawValue }
         return ghostty_input_mods_e(rawValue: mods)
+    }
+
+    // MARK: - Search
+
+    @objc private func handleStartSearch(_ notification: Notification) {
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        guard let ud = notification.userInfo?["userdata"] as? UnsafeMutableRawPointer,
+              ud == selfPtr else { return }
+
+        let needle = notification.userInfo?["needle"] as? String ?? ""
+
+        if let existing = searchOverlay {
+            // Already open — just re-focus.
+            existing.focusSearchField()
+            return
+        }
+
+        guard let surface else { return }
+        let overlay = SearchOverlayView(surface: surface, initialNeedle: needle)
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(overlay)
+
+        NSLayoutConstraint.activate([
+            overlay.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+            overlay.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+        ])
+
+        searchOverlay = overlay
+        overlay.focusSearchField()
+    }
+
+    @objc private func handleEndSearch(_ notification: Notification) {
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        guard let ud = notification.userInfo?["userdata"] as? UnsafeMutableRawPointer,
+              ud == selfPtr else { return }
+
+        searchOverlay?.removeFromSuperview()
+        searchOverlay = nil
+        window?.makeFirstResponder(self)
+    }
+
+    @objc private func handleSearchTotal(_ notification: Notification) {
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        guard let ud = notification.userInfo?["userdata"] as? UnsafeMutableRawPointer,
+              ud == selfPtr else { return }
+
+        if let total = notification.userInfo?["total"] as? Int {
+            searchOverlay?.total = total
+        }
+    }
+
+    @objc private func handleSearchSelected(_ notification: Notification) {
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        guard let ud = notification.userInfo?["userdata"] as? UnsafeMutableRawPointer,
+              ud == selfPtr else { return }
+
+        if let selected = notification.userInfo?["selected"] as? Int {
+            searchOverlay?.selected = selected
+        }
     }
 
     // MARK: - Notifications
