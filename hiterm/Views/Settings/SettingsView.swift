@@ -128,7 +128,10 @@ struct AppearanceSettingsView: View {
     @AppStorage("windowOpacity") private var windowOpacity = 1.0
 
     @State private var monoFonts: [String] = []
+    @State private var allFonts: [String] = []
+    @AppStorage("fontMonoOnly") private var monoOnly = true
     @State private var themes: [String] = []
+    @State private var themesDir: String?
 
     var body: some View {
         Form {
@@ -187,6 +190,8 @@ struct AppearanceSettingsView: View {
                     }
                     .frame(width: 280)
                 }
+
+                ThemePreviewView(themeName: theme, themesDir: themesDir)
             }
 
             Section("Window") {
@@ -242,11 +247,141 @@ struct AppearanceSettingsView: View {
                 let themeFiles = files.filter { !$0.hasPrefix(".") }
                 if !themeFiles.isEmpty {
                     themes = themeFiles.sorted()
+                    themesDir = path
                     return
                 }
             }
         }
         themes = []
+    }
+}
+
+// MARK: - Theme Preview
+
+private struct ThemeColors {
+    var background: NSColor = .black
+    var foreground: NSColor = .white
+    var cursor: NSColor = .white
+    var palette: [NSColor] = Array(repeating: .white, count: 16)
+
+    static func parse(from path: String) -> ThemeColors? {
+        guard let content = try? String(contentsOfFile: path, encoding: .utf8) else { return nil }
+        var colors = ThemeColors()
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+            let parts = trimmed.split(separator: "=", maxSplits: 1)
+            guard parts.count == 2 else { continue }
+            let key = parts[0].trimmingCharacters(in: .whitespaces)
+            let value = parts[1].trimmingCharacters(in: .whitespaces)
+
+            switch key {
+            case "background": colors.background = NSColor(hex: value) ?? .black
+            case "foreground": colors.foreground = NSColor(hex: value) ?? .white
+            case "cursor-color": colors.cursor = NSColor(hex: value) ?? .white
+            case "palette":
+                let sub = value.split(separator: "=", maxSplits: 1)
+                if sub.count == 2,
+                   let idx = Int(sub[0].trimmingCharacters(in: .whitespaces)),
+                   (0..<16).contains(idx),
+                   let c = NSColor(hex: String(sub[1].trimmingCharacters(in: .whitespaces))) {
+                    colors.palette[idx] = c
+                }
+            default: break
+            }
+        }
+        return colors
+    }
+}
+
+private extension NSColor {
+    convenience init?(hex: String) {
+        var h = hex.trimmingCharacters(in: .whitespaces)
+        if h.hasPrefix("#") { h.removeFirst() }
+        guard h.count == 6, let val = UInt64(h, radix: 16) else { return nil }
+        self.init(
+            red: CGFloat((val >> 16) & 0xFF) / 255,
+            green: CGFloat((val >> 8) & 0xFF) / 255,
+            blue: CGFloat(val & 0xFF) / 255,
+            alpha: 1
+        )
+    }
+}
+
+struct ThemePreviewView: View {
+    let themeName: String
+    let themesDir: String?
+    @AppStorage("fontFamily") private var fontFamily = "JetBrains Mono"
+
+    private var colors: ThemeColors {
+        guard let dir = themesDir else { return ThemeColors() }
+        return ThemeColors.parse(from: "\(dir)/\(themeName)") ?? ThemeColors()
+    }
+
+    var body: some View {
+        let c = colors
+        let font = Font.custom(fontFamily, size: 11)
+        let bg = Color(nsColor: c.background)
+        let fg = Color(nsColor: c.foreground)
+
+        VStack(alignment: .leading, spacing: 0) {
+            // Line 1: prompt
+            HStack(spacing: 0) {
+                Text("~/projects ").font(font).foregroundColor(Color(nsColor: c.palette[4]))
+                Text("$ ").font(font).foregroundColor(Color(nsColor: c.palette[2]))
+                Text("ls -la").font(font).foregroundColor(fg)
+            }
+            .padding(.bottom, 2)
+
+            // Line 2-4: file listing
+            HStack(spacing: 0) {
+                Text("drwxr-xr-x  ").font(font).foregroundColor(fg)
+                Text("Documents/").font(font).foregroundColor(Color(nsColor: c.palette[4]))
+            }
+            HStack(spacing: 0) {
+                Text("-rw-r--r--  ").font(font).foregroundColor(fg)
+                Text("README.md").font(font).foregroundColor(fg)
+            }
+            HStack(spacing: 0) {
+                Text("-rwxr-xr-x  ").font(font).foregroundColor(fg)
+                Text("build.sh").font(font).foregroundColor(Color(nsColor: c.palette[2]))
+            }
+            .padding(.bottom, 2)
+
+            // Line 5: prompt with cursor
+            HStack(spacing: 0) {
+                Text("~/projects ").font(font).foregroundColor(Color(nsColor: c.palette[4]))
+                Text("$ ").font(font).foregroundColor(Color(nsColor: c.palette[2]))
+                Text(" ")
+                    .font(font)
+                    .background(Color(nsColor: c.cursor))
+                    .frame(width: 7)
+            }
+
+            // Palette bar
+            HStack(spacing: 2) {
+                ForEach(0..<8, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(nsColor: c.palette[i]))
+                        .frame(width: 16, height: 8)
+                }
+                Spacer().frame(width: 6)
+                ForEach(8..<16, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(nsColor: c.palette[i]))
+                        .frame(width: 16, height: 8)
+                }
+            }
+            .padding(.top, 6)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(bg)
+        .cornerRadius(6)
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
