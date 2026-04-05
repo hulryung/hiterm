@@ -139,7 +139,7 @@ struct AppearanceSettingsView: View {
                 LabeledContent("Family") {
                     SearchablePicker(
                         selection: $fontFamily,
-                        items: monoFonts,
+                        items: monoOnly ? monoFonts : allFonts,
                         placeholder: "Search fonts…"
                     ) { font in
                         HStack(spacing: 8) {
@@ -152,6 +152,10 @@ struct AppearanceSettingsView: View {
                     }
                     .frame(width: 280)
                 }
+
+                Toggle("Monospace only", isOn: $monoOnly)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
 
                 LabeledContent("Size") {
                     HStack(spacing: 8) {
@@ -166,16 +170,21 @@ struct AppearanceSettingsView: View {
                 }
 
                 // Preview
-                HStack {
-                    Spacer()
-                    Text("The quick brown fox jumps over the lazy dog")
-                        .font(.custom(fontFamily, size: fontSize))
-                        .padding(10)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.black.opacity(0.4))
-                        .foregroundColor(.white)
-                        .cornerRadius(6)
-                    Spacer()
+                VStack(spacing: 4) {
+                    HStack {
+                        Spacer()
+                        Text("The quick brown fox jumps over the lazy dog")
+                            .font(.custom(fontFamily, size: fontSize))
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.black.opacity(0.4))
+                            .foregroundColor(.white)
+                            .cornerRadius(6)
+                        Spacer()
+                    }
+                    Text("Use arrow keys to preview fonts instantly")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
                 }
             }
 
@@ -192,6 +201,9 @@ struct AppearanceSettingsView: View {
                 }
 
                 ThemePreviewView(themeName: theme, themesDir: themesDir)
+                Text("Use arrow keys to preview themes instantly")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
             }
 
             Section("Window") {
@@ -215,7 +227,9 @@ struct AppearanceSettingsView: View {
 
     private func loadMonoFonts() {
         let manager = NSFontManager.shared
-        monoFonts = manager.availableFontFamilies.filter { family in
+        let families = manager.availableFontFamilies.sorted()
+        allFonts = families
+        monoFonts = families.filter { family in
             guard let font = NSFont(name: family, size: 13) else { return false }
             return font.isFixedPitch
                 || family.localizedCaseInsensitiveContains("mono")
@@ -224,7 +238,7 @@ struct AppearanceSettingsView: View {
                 || family.localizedCaseInsensitiveContains("courier")
                 || family.localizedCaseInsensitiveContains("menlo")
                 || family.localizedCaseInsensitiveContains("terminal")
-        }.sorted()
+        }
     }
 
     private func loadThemes() {
@@ -507,123 +521,100 @@ struct SearchablePicker<RowContent: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Selected value button
-            Button(action: { toggleExpanded() }) {
-                HStack {
-                    Text(selection)
-                        .font(.system(size: 12))
-                        .lineLimit(1)
-                    Spacer()
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(Color(nsColor: .controlBackgroundColor))
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                )
+        Button(action: { isExpanded.toggle() }) {
+            HStack {
+                Text(selection)
+                    .font(.system(size: 12))
+                    .lineLimit(1)
+                Spacer()
+                Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(Color(nsColor: .controlBackgroundColor))
+            .cornerRadius(6)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $isExpanded) {
+            VStack(spacing: 0) {
+                TextField(placeholder, text: $searchText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+                    .padding(6)
 
-            if isExpanded {
-                VStack(spacing: 0) {
-                    // Search field
-                    TextField(placeholder, text: $searchText)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 12))
-                        .padding(6)
+                Divider()
 
-                    Divider()
-
-                    // Scrollable list
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 0) {
-                                ForEach(Array(filteredItems.enumerated()), id: \.element) { index, item in
-                                    Button(action: {
-                                        selection = item
-                                        searchText = ""
-                                        collapse()
-                                    }) {
-                                        HStack {
-                                            rowContent(item)
-                                            Spacer()
-                                            if item == selection {
-                                                Image(systemName: "checkmark")
-                                                    .font(.system(size: 10, weight: .bold))
-                                                    .foregroundColor(.accentColor)
-                                            }
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(Array(filteredItems.enumerated()), id: \.element) { index, item in
+                                Button(action: {
+                                    selection = item
+                                    searchText = ""
+                                    isExpanded = false
+                                }) {
+                                    HStack {
+                                        rowContent(item)
+                                        Spacer()
+                                        if item == selection {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 10, weight: .bold))
+                                                .foregroundColor(.accentColor)
                                         }
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .contentShape(Rectangle())
                                     }
-                                    .buttonStyle(.plain)
-                                    .background(
-                                        index == keyHandler.highlightedIndex
-                                            ? Color.accentColor.opacity(0.15)
-                                            : Color.clear
-                                    )
-                                    .id(item)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .contentShape(Rectangle())
                                 }
+                                .buttonStyle(.plain)
+                                .background(
+                                    index == keyHandler.highlightedIndex
+                                        ? Color.accentColor.opacity(0.15)
+                                        : Color.clear
+                                )
+                                .id(item)
                             }
-                        }
-                        .onAppear {
-                            updateKeyHandler()
-                            if filteredItems.contains(selection) {
-                                proxy.scrollTo(selection, anchor: .center)
-                            }
-                        }
-                        .onChange(of: keyHandler.scrollTarget) { target in
-                            if let target {
-                                proxy.scrollTo(target, anchor: .center)
-                                keyHandler.scrollTarget = nil
-                            }
-                        }
-                        .onChange(of: searchText) { _ in
-                            updateKeyHandler()
                         }
                     }
-                    .frame(maxHeight: 200)
+                    .onAppear {
+                        updateKeyHandler()
+                        proxy.scrollTo(selection, anchor: .center)
+                    }
+                    .onChange(of: keyHandler.scrollTarget) { target in
+                        if let target {
+                            proxy.scrollTo(target, anchor: .center)
+                            keyHandler.scrollTarget = nil
+                        }
+                    }
+                    .onChange(of: searchText) { _ in
+                        updateKeyHandler()
+                    }
                 }
-                .background(Color(nsColor: .controlBackgroundColor))
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
-                .padding(.top, 2)
+                .frame(maxHeight: 200)
+            }
+            .frame(width: 260)
+        }
+        .onChange(of: isExpanded) { expanded in
+            if expanded {
+                updateKeyHandler()
+                keyHandler.onSelect = { item in selection = item }
+                keyHandler.onDismiss = { searchText = ""; isExpanded = false }
+                keyHandler.install()
+            } else {
+                searchText = ""
+                keyHandler.remove()
             }
         }
-        .onDisappear { keyHandler.remove() }
     }
 
     private func updateKeyHandler() {
         keyHandler.filteredItems = filteredItems
         keyHandler.syncHighlight(to: selection)
-    }
-
-    private func toggleExpanded() {
-        withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() }
-        if isExpanded {
-            updateKeyHandler()
-            keyHandler.onSelect = { item in selection = item }
-            keyHandler.onDismiss = { collapse() }
-            keyHandler.install()
-        } else {
-            keyHandler.remove()
-        }
-    }
-
-    private func collapse() {
-        searchText = ""
-        withAnimation(.easeInOut(duration: 0.15)) { isExpanded = false }
-        keyHandler.remove()
     }
 }
