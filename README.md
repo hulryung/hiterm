@@ -20,7 +20,7 @@ Call it terminal otaku. I'm okay with that.
 
 ## Demo
 
-<video src="https://github.com/hulryung/hiterm/releases/download/v0.3.2/hiterm-demo.mp4" controls autoplay muted loop width="100%"></video>
+https://github.com/user-attachments/assets/209760e1-335b-4bca-bed8-1d95613f0ae9
 
 ## Features
 
