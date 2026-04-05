@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/hiterm.iconset/icon_128x128.png" width="128" alt="hiterm icon">
+</p>
+
 # hiterm
 
 A macOS-native terminal emulator built on [libghostty](https://github.com/ghostty-org/ghostty).
@@ -13,6 +17,10 @@ I wanted a terminal that feels as polished as the apps around it. Smooth pixel-l
 This is not a terminal for everyone. This is a terminal for someone who obsesses over how things *feel*. Built for personal satisfaction — the kind of project where you spend an afternoon getting the pane close animation direction just right, because a pane on the left should slide left, not right.
 
 Call it terminal otaku. I'm okay with that.
+
+## Theme Preview
+
+https://github.com/hulryung/hiterm/releases/download/v0.3.2/2026-04-05.20-25-14.mp4
 
 ## Features
 
