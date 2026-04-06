@@ -1,6 +1,7 @@
 import AppKit
 import GhosttyKit
 
+
 /// Wraps the ghostty_app_t lifecycle and manages runtime callbacks.
 class GhosttyApp {
     private(set) var app: ghostty_app_t?
@@ -275,7 +276,6 @@ class GhosttyApp {
                     let expandedPath = NSString(string: urlString).standardizingPath
                     url = URL(fileURLWithPath: expandedPath)
                 }
-
                 NSWorkspace.shared.open(url)
             }
             return true
