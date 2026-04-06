@@ -261,11 +261,22 @@ class GhosttyApp {
 
         case GHOSTTY_ACTION_OPEN_URL:
             if let urlPtr = action.action.open_url.url {
-                let len = action.action.open_url.len
-                let url = String(cString: urlPtr)
-                if let nsUrl = URL(string: url) {
-                    NSWorkspace.shared.open(nsUrl)
+                let len = Int(action.action.open_url.len)
+                let data = Data(bytes: urlPtr, count: len)
+                let urlString = String(data: data, encoding: .utf8) ?? ""
+                guard !urlString.isEmpty else { return true }
+
+                // If the URL has a scheme, use it directly.
+                // Otherwise treat it as a file path.
+                let url: URL
+                if let candidate = URL(string: urlString), candidate.scheme != nil {
+                    url = candidate
+                } else {
+                    let expandedPath = NSString(string: urlString).standardizingPath
+                    url = URL(fileURLWithPath: expandedPath)
                 }
+
+                NSWorkspace.shared.open(url)
             }
             return true
 
