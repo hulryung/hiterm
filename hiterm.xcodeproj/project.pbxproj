@@ -334,7 +334,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = hiterm/App/hiterm.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/libs/GhosttyKit/include",
 				);
@@ -345,7 +345,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/libs/GhosttyKit/lib",
 				);
-				MARKETING_VERSION = 0.3.3;
+				MARKETING_VERSION = 0.3.4;
 				OTHER_LDFLAGS = (
 					"-lghostty",
 					"-lc++",
@@ -436,7 +436,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = hiterm/App/hiterm.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/libs/GhosttyKit/include",
 				);
@@ -447,7 +447,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/libs/GhosttyKit/lib",
 				);
-				MARKETING_VERSION = 0.3.3;
+				MARKETING_VERSION = 0.3.4;
 				OTHER_LDFLAGS = (
 					"-lghostty",
 					"-lc++",
