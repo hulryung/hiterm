@@ -100,15 +100,23 @@ class TerminalSplitView: NSView {
         rootNode = replaceLeaf(in: rootNode, target: focused, with: .split(container))
         addSubview(newSurface)
 
-        let divider = DividerView(direction: direction)
-        divider.onDrag = { [weak self] ratio in
-            self?.updateSplitRatio(for: focused, ratio: ratio)
-        }
+        let divider = makeDivider(for: container)
         dividerViews.append(divider)
         addSubview(divider)
 
         layoutSplits()
         focusedSurface = newSurface
+    }
+
+    private func makeDivider(for container: SplitContainer) -> DividerView {
+        let divider = DividerView(direction: container.direction)
+        divider.container = container
+        divider.onDrag = { [weak self, weak container] ratio in
+            guard let self, let container else { return }
+            container.ratio = max(0.1, min(0.9, ratio))
+            self.layoutSplits()
+        }
+        return divider
     }
 
     private func handleSurfaceClosed(_ surface: TerminalSurfaceView) {
@@ -332,12 +340,7 @@ class TerminalSplitView: NSView {
 
     private func rebuildDividers(_ node: SplitNode) {
         if case .split(let container) = node {
-            let divider = DividerView(direction: container.direction)
-            divider.onDrag = { [weak self, weak container] ratio in
-                guard let self, let container else { return }
-                container.ratio = max(0.1, min(0.9, ratio))
-                self.layoutSplits()
-            }
+            let divider = makeDivider(for: container)
             dividerViews.append(divider)
             addSubview(divider)
             rebuildDividers(container.first)
@@ -371,9 +374,10 @@ class TerminalSplitView: NSView {
             layoutNode(container.first, in: firstRect)
             layoutNode(container.second, in: secondRect)
 
-            // Position divider
-            if let divider = dividerViews.first(where: { _ in true }) {
+            // Position the divider that belongs to this specific container.
+            if let divider = dividerViews.first(where: { $0.container === container }) {
                 divider.frame = dividerRect
+                divider.parentRect = rect
             }
         }
     }
@@ -383,7 +387,8 @@ class TerminalSplitView: NSView {
         direction: SplitContainer.Direction,
         ratio: CGFloat
     ) -> (NSRect, NSRect, NSRect) {
-        let dividerThickness: CGFloat = 1
+        // Thicker divider hit area for easier grabbing.
+        let dividerThickness: CGFloat = 3
 
         switch direction {
         case .horizontal:
@@ -457,25 +462,6 @@ class TerminalSplitView: NSView {
         }
     }
 
-    private func updateSplitRatio(for surface: TerminalSurfaceView, ratio: CGFloat) {
-        rootNode = updateRatio(in: rootNode, near: surface, ratio: ratio)
-        layoutSplits()
-    }
-
-    private func updateRatio(in node: SplitNode, near surface: TerminalSurfaceView, ratio: CGFloat) -> SplitNode {
-        switch node {
-        case .leaf: return node
-        case .split(let container):
-            if containsSurface(surface, in: container.first) || containsSurface(surface, in: container.second) {
-                container.ratio = max(0.1, min(0.9, ratio))
-                return .split(container)
-            }
-            container.first = updateRatio(in: container.first, near: surface, ratio: ratio)
-            container.second = updateRatio(in: container.second, near: surface, ratio: ratio)
-            return .split(container)
-        }
-    }
-
     private func containsSurface(_ surface: TerminalSurfaceView, in node: SplitNode) -> Bool {
         switch node {
         case .leaf(let s): return s === surface
@@ -489,17 +475,48 @@ class TerminalSplitView: NSView {
 
 class DividerView: NSView {
     let direction: SplitContainer.Direction
+    weak var container: SplitContainer?
     var onDrag: ((CGFloat) -> Void)?
+
+    /// The parent container rect (in superview coordinates) that this divider
+    /// splits. Set by the SplitView during layout. Used to compute drag ratio.
+    var parentRect: NSRect = .zero
 
     init(direction: SplitContainer.Direction) {
         self.direction = direction
         super.init(frame: .zero)
         wantsLayer = true
-        layer?.backgroundColor = NSColor.separatorColor.cgColor
+        // Subtle visual: transparent hit area with a 1px line in the middle drawn via a sublayer.
+        let line = CALayer()
+        line.backgroundColor = NSColor.separatorColor.cgColor
+        line.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+        layer?.addSublayer(line)
+        self.visualLine = line
     }
+
+    private var visualLine: CALayer?
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) not implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        // Draw the visual line at 1px in the middle of the hit area.
+        guard let visualLine else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        switch direction {
+        case .horizontal:
+            let lineWidth: CGFloat = 1
+            visualLine.frame = NSRect(x: (bounds.width - lineWidth) / 2, y: 0,
+                                      width: lineWidth, height: bounds.height)
+        case .vertical:
+            let lineHeight: CGFloat = 1
+            visualLine.frame = NSRect(x: 0, y: (bounds.height - lineHeight) / 2,
+                                      width: bounds.width, height: lineHeight)
+        }
+        CATransaction.commit()
     }
 
     override func resetCursorRects() {
@@ -507,15 +524,22 @@ class DividerView: NSView {
         addCursorRect(bounds, cursor: cursor)
     }
 
+    // Required so mouseDragged is delivered to this view.
+    override func mouseDown(with event: NSEvent) {
+        // Intentionally empty — claims the mouse down so mouseDragged fires.
+    }
+
     override func mouseDragged(with event: NSEvent) {
-        guard let superview else { return }
+        guard let superview, parentRect.width > 0, parentRect.height > 0 else { return }
         let loc = superview.convert(event.locationInWindow, from: nil)
         let ratio: CGFloat
-        if direction == .horizontal {
-            ratio = loc.x / superview.bounds.width
-        } else {
-            ratio = 1.0 - (loc.y / superview.bounds.height)
+        switch direction {
+        case .horizontal:
+            ratio = (loc.x - parentRect.minX) / parentRect.width
+        case .vertical:
+            // AppKit y increases upward; first pane is on top.
+            ratio = 1.0 - ((loc.y - parentRect.minY) / parentRect.height)
         }
-        onDrag?(ratio)
+        onDrag?(max(0.0, min(1.0, ratio)))
     }
 }
