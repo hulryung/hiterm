@@ -1,9 +1,10 @@
 import AppKit
 import GhosttyKit
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var ghosttyApp: GhosttyApp!
     private var windowControllers: [MainWindowController] = []
+    private var selectTabItems: [NSMenuItem] = []
 
     var ghosttyAppInstance: GhosttyApp? { ghosttyApp }
 
@@ -104,15 +105,61 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let windowMenu = NSMenu(title: "Window")
         windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         windowMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+
+        // Tabs section
         windowMenu.addItem(.separator())
         windowMenu.addItem(withTitle: "Show Previous Tab", action: #selector(MainWindowController.previousTab(_:)), keyEquivalent: "[")
         windowMenu.items.last?.keyEquivalentModifierMask = [.command, .shift]
         windowMenu.addItem(withTitle: "Show Next Tab", action: #selector(MainWindowController.nextTab(_:)), keyEquivalent: "]")
         windowMenu.items.last?.keyEquivalentModifierMask = [.command, .shift]
+        selectTabItems.removeAll()
+        for i in 1...9 {
+            let item = NSMenuItem(
+                title: "Select Tab \(i)",
+                action: #selector(MainWindowController.gotoTab(_:)),
+                keyEquivalent: "\(i)")
+            item.keyEquivalentModifierMask = [.command]
+            item.tag = i
+            windowMenu.addItem(item)
+            selectTabItems.append(item)
+        }
+
+        // Splits section
+        windowMenu.addItem(.separator())
+        let splitItems: [(String, String, NSEvent.ModifierFlags, Int)] = [
+            ("Select Split Above", "\u{F700}", [.command, .option], 2),
+            ("Select Split Below", "\u{F701}", [.command, .option], 4),
+            ("Select Split Left",  "\u{F702}", [.command, .option], 3),
+            ("Select Split Right", "\u{F703}", [.command, .option], 5),
+            ("Select Previous Split", "[", [.command], 0),
+            ("Select Next Split",     "]", [.command], 1)
+        ]
+        for (title, key, mods, tag) in splitItems {
+            let item = NSMenuItem(
+                title: title,
+                action: #selector(MainWindowController.gotoSplit(_:)),
+                keyEquivalent: key)
+            item.keyEquivalentModifierMask = mods
+            item.tag = tag
+            windowMenu.addItem(item)
+        }
+
+        windowMenu.delegate = self
+
         windowMenuItem.submenu = windowMenu
         mainMenu.addItem(windowMenuItem)
         NSApp.windowsMenu = windowMenu
 
         NSApp.mainMenu = mainMenu
+    }
+
+    // MARK: - NSMenuDelegate
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard !selectTabItems.isEmpty, menu === selectTabItems.first?.menu else { return }
+        let tabCount = (NSApp.keyWindow?.windowController as? MainWindowController)?.tabCount ?? 0
+        for item in selectTabItems {
+            item.isHidden = item.tag > tabCount
+        }
     }
 }

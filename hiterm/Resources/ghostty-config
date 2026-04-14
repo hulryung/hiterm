@@ -1,22 +1,5 @@
 shell-integration = none
 window-padding-y = 4
 
-# Tab shortcuts: Cmd+1~9 to jump to tab
-keybind = super+one=goto_tab:1
-keybind = super+two=goto_tab:2
-keybind = super+three=goto_tab:3
-keybind = super+four=goto_tab:4
-keybind = super+five=goto_tab:5
-keybind = super+six=goto_tab:6
-keybind = super+seven=goto_tab:7
-keybind = super+eight=goto_tab:8
-keybind = super+nine=goto_tab:9
-
-# Split navigation: Cmd+Option+Arrow to move between panes
-keybind = super+alt+left=goto_split:left
-keybind = super+alt+right=goto_split:right
-keybind = super+alt+up=goto_split:up
-keybind = super+alt+down=goto_split:down
-# Sequential split navigation
-keybind = super+bracket_left=goto_split:previous
-keybind = super+bracket_right=goto_split:next
+# Tab and split navigation shortcuts are defined in the Window menu
+# (AppDelegate.setupMainMenu) so they appear in the menu bar.

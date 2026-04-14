@@ -247,7 +247,8 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     // MARK: - Key Equivalents
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard event.modifierFlags.contains(.command) else {
+        guard event.modifierFlags.contains(.command),
+              !event.modifierFlags.contains(.option) else {
             return super.performKeyEquivalent(with: event)
         }
 

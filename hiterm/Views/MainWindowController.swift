@@ -6,6 +6,8 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
     private let ghosttyApp: GhosttyApp
     private var tabs: [TabItem] = []
     private var currentTabIndex: Int = 0
+
+    var tabCount: Int { tabs.count }
     private var tabBarView: TabBarView!
     private var contentContainerView: NSView!
     private var observers: [NSObjectProtocol] = []
@@ -759,6 +761,26 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         if currentTabIndex < tabs.count - 1 {
             selectTab(at: currentTabIndex + 1, animated: true)
         }
+    }
+
+    @objc func gotoTab(_ sender: NSMenuItem) {
+        let index = sender.tag - 1
+        guard index >= 0, index < tabs.count else { return }
+        selectTab(at: index, animated: true)
+    }
+
+    @objc func gotoSplit(_ sender: NSMenuItem) {
+        let direction: ghostty_action_goto_split_e
+        switch sender.tag {
+        case 0: direction = GHOSTTY_GOTO_SPLIT_PREVIOUS
+        case 1: direction = GHOSTTY_GOTO_SPLIT_NEXT
+        case 2: direction = GHOSTTY_GOTO_SPLIT_UP
+        case 3: direction = GHOSTTY_GOTO_SPLIT_LEFT
+        case 4: direction = GHOSTTY_GOTO_SPLIT_DOWN
+        case 5: direction = GHOSTTY_GOTO_SPLIT_RIGHT
+        default: return
+        }
+        currentTab?.splitView.navigateToSplit(direction: direction)
     }
 
     // MARK: - Fullscreen
