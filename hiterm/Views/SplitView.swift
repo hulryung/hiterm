@@ -286,6 +286,18 @@ class TerminalSplitView: NSView {
         }
     }
 
+    /// Return the leaf surface at a point in split-view coordinates, ignoring
+    /// dividers and overlays. Returns nil if the point is outside any pane or
+    /// the tree contains no leaves.
+    func hitTestSurface(at point: NSPoint) -> TerminalSurfaceView? {
+        var leaves: [(surface: TerminalSurfaceView, frame: NSRect)] = []
+        collectLeaves(rootNode, into: &leaves)
+        for entry in leaves where entry.frame.contains(point) {
+            return entry.surface
+        }
+        return nil
+    }
+
     /// Swap two leaf surfaces' positions in the tree. The split structure and
     /// ratios are preserved; only the leaves exchange locations. No-op if
     /// `a === b` or either surface is not present. Caller is responsible for
