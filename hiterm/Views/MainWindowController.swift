@@ -783,6 +783,18 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
         currentTab?.splitView.navigateToSplit(direction: direction)
     }
 
+    @objc func moveSplit(_ sender: NSMenuItem) {
+        let direction: PaneDirection
+        switch sender.tag {
+        case 2: direction = .up
+        case 3: direction = .left
+        case 4: direction = .down
+        case 5: direction = .right
+        default: return
+        }
+        currentTab?.splitView.moveFocusedSplit(direction: direction)
+    }
+
     // MARK: - Fullscreen
 
     // MARK: - Fullscreen

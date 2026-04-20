@@ -144,6 +144,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             windowMenu.addItem(item)
         }
 
+        // Move splits section
+        windowMenu.addItem(.separator())
+        let moveSplitItems: [(String, String, Int)] = [
+            ("Move Split Up",    "\u{F700}", 2),
+            ("Move Split Left",  "\u{F702}", 3),
+            ("Move Split Down",  "\u{F701}", 4),
+            ("Move Split Right", "\u{F703}", 5)
+        ]
+        for (title, key, tag) in moveSplitItems {
+            let item = NSMenuItem(
+                title: title,
+                action: #selector(MainWindowController.moveSplit(_:)),
+                keyEquivalent: key)
+            item.keyEquivalentModifierMask = [.command, .shift]
+            item.tag = tag
+            windowMenu.addItem(item)
+        }
+
         windowMenu.delegate = self
 
         windowMenuItem.submenu = windowMenu

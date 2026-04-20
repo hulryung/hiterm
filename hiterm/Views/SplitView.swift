@@ -295,6 +295,24 @@ class TerminalSplitView: NSView {
         layoutSplits()
     }
 
+    /// Move the focused pane in a direction by swapping with its nearest neighbor.
+    /// No-op if there is no neighbor, only one pane, or zoom is active.
+    func moveFocusedSplit(direction: PaneDirection) {
+        guard preZoomRootNode == nil else { return }   // disabled while zoomed
+        guard let focused = focusedSurface else { return }
+
+        var leaves: [(surface: TerminalSurfaceView, frame: NSRect)] = []
+        collectLeaves(rootNode, into: &leaves)
+        guard leaves.count > 1 else { return }
+
+        guard let focusedIdx = leaves.firstIndex(where: { $0.surface === focused }) else { return }
+        let entries = leaves.map { (id: ObjectIdentifier($0.surface), frame: $0.frame) }
+        guard let targetIdx = findNeighborByFrame(leaves: entries, fromIndex: focusedIdx, direction: direction) else { return }
+
+        swapSurfaces(focused, leaves[targetIdx].surface)
+        focusedSurface = focused   // focus follows the moved pane
+    }
+
     /// Recursively swap leaves by identity. Mutates `SplitContainer` nodes in
     /// place (they are reference types with var fields).
     private func swapLeaves(in node: SplitNode, a: TerminalSurfaceView, b: TerminalSurfaceView) {
