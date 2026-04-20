@@ -372,6 +372,81 @@ class TerminalSplitView: NSView {
         }
     }
 
+    // MARK: - Pane Drag
+
+    /// Run a modal drag loop for moving a pane. Called by `TerminalSurfaceView`
+    /// when it detects `Cmd+Shift+mouseDown`. Blocks until the drag ends
+    /// (mouseUp, modifier released, Esc, or loop exit). On a valid drop,
+    /// performs a swap with the pane under the cursor.
+    func runPaneDragLoop(source: TerminalSurfaceView) {
+        guard preZoomRootNode == nil else { return }     // zoom disables drag
+
+        var leavesCheck: [(surface: TerminalSurfaceView, frame: NSRect)] = []
+        collectLeaves(rootNode, into: &leavesCheck)
+        guard leavesCheck.count > 1 else { return }
+
+        let overlay = PaneDragOverlay(frame: bounds)
+        overlay.autoresizingMask = [.width, .height]
+        overlay.setSourceFrame(source.frame)
+        addSubview(overlay)
+
+        NSCursor.closedHand.push()
+
+        var target: TerminalSurfaceView? = nil
+
+        loop: while let event = window?.nextEvent(matching: [
+            .leftMouseDragged, .leftMouseUp, .flagsChanged, .keyDown
+        ]) {
+            switch event.type {
+            case .leftMouseDragged:
+                guard event.modifierFlags.contains([.command, .shift]) else {
+                    target = nil
+                    break loop
+                }
+                let point = convert(event.locationInWindow, from: nil)
+                if let hit = hitTestSurface(at: point), hit !== source {
+                    target = hit
+                    overlay.setTargetFrame(hit.frame)
+                } else {
+                    target = nil
+                    overlay.setTargetFrame(nil)
+                }
+
+            case .leftMouseUp:
+                break loop
+
+            case .flagsChanged:
+                if !event.modifierFlags.contains([.command, .shift]) {
+                    target = nil
+                    break loop
+                }
+
+            case .keyDown:
+                if event.keyCode == 53 {   // Esc
+                    target = nil
+                    break loop
+                }
+
+            default:
+                break
+            }
+        }
+
+        NSCursor.pop()
+        overlay.removeFromSuperview()
+
+        // Validate target is still a member of the current tree, and differs from source.
+        if let target, target !== source {
+            var leavesNow: [(surface: TerminalSurfaceView, frame: NSRect)] = []
+            collectLeaves(rootNode, into: &leavesNow)
+            if leavesNow.contains(where: { $0.surface === target }) &&
+               leavesNow.contains(where: { $0.surface === source }) {
+                swapSurfaces(source, target)
+                focusedSurface = source
+            }
+        }
+    }
+
     private func collectLeaves(_ node: SplitNode, into leaves: inout [(surface: TerminalSurfaceView, frame: NSRect)]) {
         switch node {
         case .leaf(let surface):
