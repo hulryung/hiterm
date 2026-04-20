@@ -44,8 +44,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.hiterm.app
         PRODUCT_NAME: hiterm
         PRODUCT_DISPLAY_NAME: hiterm
-        MARKETING_VERSION: "0.3.5"
-        CURRENT_PROJECT_VERSION: "9"
+        MARKETING_VERSION: "0.3.6"
+        CURRENT_PROJECT_VERSION: "10"
         INFOPLIST_FILE: hiterm/App/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_OBJC_BRIDGING_HEADER: ""
