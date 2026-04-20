@@ -322,26 +322,58 @@ class TerminalSplitView: NSView {
         let fromA = a.frame
         let fromB = b.frame
 
-        // Swap in the tree and lay out to compute target frames.
+        // Snapshot both panes at their pre-swap positions. These bitmaps are
+        // what we fade OUT at the old locations, avoiding the translate-and-
+        // resize flicker that Metal-backed surfaces show when their frames
+        // are animated directly.
+        let imgA = Self.snapshot(of: a)
+        let imgB = Self.snapshot(of: b)
+
+        // Perform the tree swap and lay out: live surfaces now sit at their
+        // new frames (what was B's spot belongs to A, and vice versa).
         swapLeaves(in: rootNode, a: a, b: b)
         layoutSplits()
-        let toA = a.frame
-        let toB = b.frame
 
-        // Reset to the "from" frames instantaneously, then animate to the targets.
-        a.frame = fromA
-        b.frame = fromB
+        // Hide the live surfaces initially; they will fade IN at their new
+        // positions while the snapshot proxies fade OUT at the old ones.
+        a.alphaValue = 0
+        b.alphaValue = 0
+
+        let proxyA = NSImageView(frame: fromA)
+        proxyA.imageScaling = .scaleAxesIndependently
+        proxyA.image = imgA
+        proxyA.wantsLayer = true
+        let proxyB = NSImageView(frame: fromB)
+        proxyB.imageScaling = .scaleAxesIndependently
+        proxyB.image = imgB
+        proxyB.wantsLayer = true
+        addSubview(proxyA)
+        addSubview(proxyB)
 
         isAnimatingSwap = true
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.22
+            ctx.duration = 0.25
             ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             ctx.allowsImplicitAnimation = true
-            a.animator().frame = toA
-            b.animator().frame = toB
+            proxyA.animator().alphaValue = 0
+            proxyB.animator().alphaValue = 0
+            a.animator().alphaValue = 1
+            b.animator().alphaValue = 1
         }, completionHandler: { [weak self] in
+            proxyA.removeFromSuperview()
+            proxyB.removeFromSuperview()
+            a.alphaValue = 1
+            b.alphaValue = 1
             self?.isAnimatingSwap = false
         })
+    }
+
+    private static func snapshot(of view: NSView) -> NSImage? {
+        guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return nil }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        let image = NSImage(size: view.bounds.size)
+        image.addRepresentation(rep)
+        return image
     }
 
     /// Move the focused pane in a direction by swapping with its nearest neighbor.
