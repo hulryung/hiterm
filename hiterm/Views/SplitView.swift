@@ -284,6 +284,39 @@ class TerminalSplitView: NSView {
         }
     }
 
+    /// Swap two leaf surfaces' positions in the tree. The split structure and
+    /// ratios are preserved; only the leaves exchange locations. No-op if
+    /// `a === b` or either surface is not present. Caller is responsible for
+    /// focus management and (optionally) animation — this function performs
+    /// the tree mutation and a synchronous `layoutSplits()`.
+    func swapSurfaces(_ a: TerminalSurfaceView, _ b: TerminalSurfaceView) {
+        guard a !== b else { return }
+        swapLeaves(in: rootNode, a: a, b: b)
+        layoutSplits()
+    }
+
+    /// Recursively swap leaves by identity. Mutates `SplitContainer` nodes in
+    /// place (they are reference types with var fields).
+    private func swapLeaves(in node: SplitNode, a: TerminalSurfaceView, b: TerminalSurfaceView) {
+        guard case .split(let container) = node else { return }
+
+        if case .leaf(let s) = container.first, s === a {
+            container.first = .leaf(b)
+        } else if case .leaf(let s) = container.first, s === b {
+            container.first = .leaf(a)
+        } else {
+            swapLeaves(in: container.first, a: a, b: b)
+        }
+
+        if case .leaf(let s) = container.second, s === a {
+            container.second = .leaf(b)
+        } else if case .leaf(let s) = container.second, s === b {
+            container.second = .leaf(a)
+        } else {
+            swapLeaves(in: container.second, a: a, b: b)
+        }
+    }
+
     private func collectLeaves(_ node: SplitNode, into leaves: inout [(surface: TerminalSurfaceView, frame: NSRect)]) {
         switch node {
         case .leaf(let surface):
