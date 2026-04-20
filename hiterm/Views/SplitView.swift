@@ -1,6 +1,53 @@
 import AppKit
 import GhosttyKit
 
+/// Direction for pane neighbor lookup. Mirrors `ghostty_action_goto_split_e`
+/// directional values but is independent of the C enum for testability.
+enum PaneDirection { case up, down, left, right }
+
+/// Find the nearest neighbor leaf in a given direction, using frame midpoints.
+/// Pure function — takes identifiers and frames. Returns the index into the
+/// input array, or nil if no neighbor exists in that direction.
+///
+/// "Nearest" = smallest squared distance between midpoints, among candidates
+/// that lie strictly in the requested direction from the source midpoint.
+/// AppKit convention: y increases upward, so "up" means greater y.
+func findNeighborByFrame<ID: Equatable>(
+    leaves: [(id: ID, frame: NSRect)],
+    fromIndex: Int,
+    direction: PaneDirection
+) -> Int? {
+    guard fromIndex >= 0, fromIndex < leaves.count, leaves.count > 1 else { return nil }
+    let origin = leaves[fromIndex].frame
+    let cx = origin.midX
+    let cy = origin.midY
+
+    var bestIdx: Int? = nil
+    var bestDist = CGFloat.greatestFiniteMagnitude
+
+    for (i, entry) in leaves.enumerated() where i != fromIndex {
+        let sx = entry.frame.midX
+        let sy = entry.frame.midY
+
+        let isCandidate: Bool
+        switch direction {
+        case .left:  isCandidate = sx < cx
+        case .right: isCandidate = sx > cx
+        case .up:    isCandidate = sy > cy
+        case .down:  isCandidate = sy < cy
+        }
+        guard isCandidate else { continue }
+
+        let dx = sx - cx, dy = sy - cy
+        let dist = dx * dx + dy * dy
+        if dist < bestDist {
+            bestDist = dist
+            bestIdx = i
+        }
+    }
+    return bestIdx
+}
+
 /// Recursive split tree node for terminal split panes.
 indirect enum SplitNode {
     case leaf(TerminalSurfaceView)
@@ -203,13 +250,10 @@ class TerminalSplitView: NSView {
     func navigateToSplit(direction: ghostty_action_goto_split_e) {
         guard let focused = focusedSurface else { return }
 
-        // Collect all leaf surfaces with their frames.
         var leaves: [(surface: TerminalSurfaceView, frame: NSRect)] = []
         collectLeaves(rootNode, into: &leaves)
-
         guard leaves.count > 1 else { return }
 
-        // Handle previous/next as sequential navigation.
         if direction == GHOSTTY_GOTO_SPLIT_PREVIOUS || direction == GHOSTTY_GOTO_SPLIT_NEXT {
             guard let idx = leaves.firstIndex(where: { $0.surface === focused }) else { return }
             let nextIdx: Int
@@ -222,39 +266,21 @@ class TerminalSplitView: NSView {
             return
         }
 
-        // Directional navigation: find nearest neighbor in the requested direction.
-        let focusedFrame = focused.frame
-        let cx = focusedFrame.midX
-        let cy = focusedFrame.midY
-
-        var bestSurface: TerminalSurfaceView?
-        var bestDistance = CGFloat.greatestFiniteMagnitude
-
-        for (surface, frame) in leaves {
-            guard surface !== focused else { continue }
-            let sx = frame.midX
-            let sy = frame.midY
-
-            let isCandidate: Bool
-            switch direction {
-            case GHOSTTY_GOTO_SPLIT_LEFT:  isCandidate = sx < cx
-            case GHOSTTY_GOTO_SPLIT_RIGHT: isCandidate = sx > cx
-            case GHOSTTY_GOTO_SPLIT_UP:    isCandidate = sy > cy  // AppKit: y increases upward
-            case GHOSTTY_GOTO_SPLIT_DOWN:  isCandidate = sy < cy
-            default: isCandidate = false
-            }
-
-            if isCandidate {
-                let dist = (sx - cx) * (sx - cx) + (sy - cy) * (sy - cy)
-                if dist < bestDistance {
-                    bestDistance = dist
-                    bestSurface = surface
-                }
-            }
+        guard let paneDir = Self.paneDirection(from: direction),
+              let focusedIdx = leaves.firstIndex(where: { $0.surface === focused }) else { return }
+        let entries = leaves.map { (id: ObjectIdentifier($0.surface), frame: $0.frame) }
+        if let targetIdx = findNeighborByFrame(leaves: entries, fromIndex: focusedIdx, direction: paneDir) {
+            focusedSurface = leaves[targetIdx].surface
         }
+    }
 
-        if let target = bestSurface {
-            focusedSurface = target
+    private static func paneDirection(from ghostty: ghostty_action_goto_split_e) -> PaneDirection? {
+        switch ghostty {
+        case GHOSTTY_GOTO_SPLIT_UP:    return .up
+        case GHOSTTY_GOTO_SPLIT_DOWN:  return .down
+        case GHOSTTY_GOTO_SPLIT_LEFT:  return .left
+        case GHOSTTY_GOTO_SPLIT_RIGHT: return .right
+        default: return nil
         }
     }
 

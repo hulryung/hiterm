@@ -170,4 +170,67 @@ final class SplitNodeTests: XCTestCase {
 
         XCTAssertEqual(tabs, ["A", "C", "B", "D"])
     }
+
+    // MARK: - findNeighborByFrame (pane movement neighbor detection)
+
+    /// Helper: build `[(id, frame)]` from labeled frames for readability.
+    private func leaves(_ entries: (String, NSRect)...) -> [(id: String, frame: NSRect)] {
+        entries.map { (id: $0.0, frame: $0.1) }
+    }
+
+    func testFindNeighborRightInTwoPaneHorizontal() {
+        let all = leaves(
+            ("A", NSRect(x: 0,   y: 0, width: 400, height: 400)),
+            ("B", NSRect(x: 400, y: 0, width: 400, height: 400))
+        )
+        let idx = findNeighborByFrame(leaves: all, fromIndex: 0, direction: .right)
+        XCTAssertEqual(idx, 1)
+    }
+
+    func testFindNeighborLeftHasNoNeighbor() {
+        let all = leaves(
+            ("A", NSRect(x: 0,   y: 0, width: 400, height: 400)),
+            ("B", NSRect(x: 400, y: 0, width: 400, height: 400))
+        )
+        XCTAssertNil(findNeighborByFrame(leaves: all, fromIndex: 0, direction: .left))
+    }
+
+    func testFindNeighborUpInTwoPaneVertical() {
+        // AppKit y increases upward. Top pane has larger y.
+        let all = leaves(
+            ("A", NSRect(x: 0, y: 400, width: 400, height: 400)),
+            ("B", NSRect(x: 0, y: 0,   width: 400, height: 400))
+        )
+        XCTAssertEqual(findNeighborByFrame(leaves: all, fromIndex: 1, direction: .up), 0)
+    }
+
+    func testFindNeighborFourPaneGridRight() {
+        let all = leaves(
+            ("TL", NSRect(x: 0,   y: 400, width: 400, height: 400)),
+            ("TR", NSRect(x: 400, y: 400, width: 400, height: 400)),
+            ("BL", NSRect(x: 0,   y: 0,   width: 400, height: 400)),
+            ("BR", NSRect(x: 400, y: 0,   width: 400, height: 400))
+        )
+        XCTAssertEqual(findNeighborByFrame(leaves: all, fromIndex: 0, direction: .right), 1)
+        XCTAssertEqual(findNeighborByFrame(leaves: all, fromIndex: 0, direction: .down), 2)
+        XCTAssertEqual(findNeighborByFrame(leaves: all, fromIndex: 3, direction: .up), 1)
+        XCTAssertEqual(findNeighborByFrame(leaves: all, fromIndex: 3, direction: .left), 2)
+    }
+
+    func testFindNeighborPrefersNearerWhenMultipleCandidates() {
+        let all = leaves(
+            ("A", NSRect(x: 0,   y: 0, width: 200, height: 400)),
+            ("B", NSRect(x: 200, y: 0, width: 200, height: 400)),
+            ("C", NSRect(x: 400, y: 0, width: 200, height: 400))
+        )
+        XCTAssertEqual(findNeighborByFrame(leaves: all, fromIndex: 0, direction: .right), 1)
+    }
+
+    func testFindNeighborSinglePane() {
+        let all = leaves(("A", NSRect(x: 0, y: 0, width: 400, height: 400)))
+        XCTAssertNil(findNeighborByFrame(leaves: all, fromIndex: 0, direction: .right))
+        XCTAssertNil(findNeighborByFrame(leaves: all, fromIndex: 0, direction: .left))
+        XCTAssertNil(findNeighborByFrame(leaves: all, fromIndex: 0, direction: .up))
+        XCTAssertNil(findNeighborByFrame(leaves: all, fromIndex: 0, direction: .down))
+    }
 }
