@@ -87,6 +87,8 @@ class TerminalSplitView: NSView {
         }
     }
 
+    private var isAnimatingSwap: Bool = false
+
     var onSurfaceClosed: ((TerminalSurfaceView) -> Void)?
     var onTitleChanged: ((String) -> Void)?
     var onSurfaceCreated: ((TerminalSurfaceView) -> Void)?
@@ -290,9 +292,32 @@ class TerminalSplitView: NSView {
     /// focus management and (optionally) animation — this function performs
     /// the tree mutation and a synchronous `layoutSplits()`.
     func swapSurfaces(_ a: TerminalSurfaceView, _ b: TerminalSurfaceView) {
-        guard a !== b else { return }
+        guard a !== b, !isAnimatingSwap else { return }
+
+        // Capture current frames.
+        let fromA = a.frame
+        let fromB = b.frame
+
+        // Swap in the tree and lay out to compute target frames.
         swapLeaves(in: rootNode, a: a, b: b)
         layoutSplits()
+        let toA = a.frame
+        let toB = b.frame
+
+        // Reset to the "from" frames instantaneously, then animate to the targets.
+        a.frame = fromA
+        b.frame = fromB
+
+        isAnimatingSwap = true
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.22
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            ctx.allowsImplicitAnimation = true
+            a.animator().frame = toA
+            b.animator().frame = toB
+        }, completionHandler: { [weak self] in
+            self?.isAnimatingSwap = false
+        })
     }
 
     /// Move the focused pane in a direction by swapping with its nearest neighbor.
