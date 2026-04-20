@@ -98,6 +98,18 @@ class TerminalSplitView: NSView {
         return false
     }
 
+    var paneCount: Int {
+        var n = 0
+        func walk(_ node: SplitNode) {
+            switch node {
+            case .leaf: n += 1
+            case .split(let c): walk(c.first); walk(c.second)
+            }
+        }
+        walk(rootNode)
+        return n
+    }
+
     init(ghosttyApp: GhosttyApp, baseConfig: ghostty_surface_config_s? = nil, frame: NSRect = NSRect(x: 0, y: 0, width: 800, height: 600)) {
         self.ghosttyApp = ghosttyApp
         let surface = TerminalSurfaceView(ghosttyApp: ghosttyApp, baseConfig: baseConfig, frame: frame)

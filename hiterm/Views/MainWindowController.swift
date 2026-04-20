@@ -810,3 +810,13 @@ class MainWindowController: NSWindowController, NSWindowDelegate, SwipeTrackerDe
     func windowDidExitFullScreen(_ notification: Notification) {
     }
 }
+
+extension MainWindowController: NSMenuItemValidation {
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(moveSplit(_:)) {
+            guard let splitView = currentTab?.splitView else { return false }
+            return splitView.paneCount > 1
+        }
+        return true
+    }
+}
