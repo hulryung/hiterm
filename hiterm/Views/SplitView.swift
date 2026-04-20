@@ -339,24 +339,30 @@ class TerminalSplitView: NSView {
         a.alphaValue = 0
         b.alphaValue = 0
 
-        let proxyA = NSImageView(frame: fromA)
-        proxyA.imageScaling = .scaleAxesIndependently
-        proxyA.image = imgA
-        proxyA.wantsLayer = true
-        let proxyB = NSImageView(frame: fromB)
-        proxyB.imageScaling = .scaleAxesIndependently
-        proxyB.image = imgB
-        proxyB.wantsLayer = true
+        // Clip containers whose frame we animate; the image inside stays at its
+        // natural size pinned to top-left, so the content doesn't stretch as
+        // the container resizes — only the visible window into the content
+        // expands/contracts.
+        let proxyA = Self.makeSnapshotProxy(frame: fromA, image: imgA)
+        let proxyB = Self.makeSnapshotProxy(frame: fromB, image: imgB)
         addSubview(proxyA)
         addSubview(proxyB)
 
+        // Read the target frames after the layout above settled them.
+        let toA = a.frame
+        let toB = b.frame
+
         isAnimatingSwap = true
         NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.25
+            ctx.duration = 0.28
             ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             ctx.allowsImplicitAnimation = true
+            // Snapshots travel (and resize) to each pane's new home while fading out.
+            proxyA.animator().frame = toA
             proxyA.animator().alphaValue = 0
+            proxyB.animator().frame = toB
             proxyB.animator().alphaValue = 0
+            // Live surfaces fade in at their already-set target frames.
             a.animator().alphaValue = 1
             b.animator().alphaValue = 1
         }, completionHandler: { [weak self] in
@@ -374,6 +380,25 @@ class TerminalSplitView: NSView {
         let image = NSImage(size: view.bounds.size)
         image.addRepresentation(rep)
         return image
+    }
+
+    /// Flipped clip container so top-left is (0,0) — lets the inner image view
+    /// stay pinned to the top-left as the container's frame animates.
+    private final class FlippedClipView: NSView {
+        override var isFlipped: Bool { true }
+    }
+
+    private static func makeSnapshotProxy(frame: NSRect, image: NSImage?) -> NSView {
+        let container = FlippedClipView(frame: frame)
+        container.wantsLayer = true
+        container.layer?.masksToBounds = true
+        let imageView = NSImageView(frame: NSRect(origin: .zero, size: frame.size))
+        imageView.image = image
+        imageView.imageScaling = .scaleNone
+        imageView.imageAlignment = .alignTopLeft
+        imageView.autoresizingMask = []   // fixed size + position as container animates
+        container.addSubview(imageView)
+        return container
     }
 
     /// Move the focused pane in a direction by swapping with its nearest neighbor.
