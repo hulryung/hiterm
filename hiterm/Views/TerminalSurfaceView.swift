@@ -248,11 +248,14 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard event.modifierFlags.contains(.command),
-              !event.modifierFlags.contains(.option) else {
+              !event.modifierFlags.contains(.option),
+              !event.modifierFlags.contains(.shift) else {
+            // Let the menu handle Cmd+Shift / Cmd+Option combinations
+            // (e.g., Cmd+Shift+Arrow for Move Split).
             return super.performKeyEquivalent(with: event)
         }
 
-        // Custom Cmd+key shortcuts handled here.
+        // Custom plain-Cmd+key shortcuts handled here.
         switch event.keyCode {
         case 123: // Left arrow
             NotificationCenter.default.post(name: .hitermSwipePrevTab, object: nil)
