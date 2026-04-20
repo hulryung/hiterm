@@ -43,6 +43,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hiterm.app
         PRODUCT_NAME: hiterm
+        PRODUCT_DISPLAY_NAME: hiterm
         MARKETING_VERSION: "0.3.5"
         CURRENT_PROJECT_VERSION: "9"
         INFOPLIST_FILE: hiterm/App/Info.plist
@@ -74,6 +75,10 @@ targets:
           - "-fmodule-map-file=$(PROJECT_DIR)/libs/GhosttyKit/include/module.modulemap"
         LD_RUNPATH_SEARCH_PATHS:
           - "@executable_path/../Frameworks"
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.hiterm.app.debug
+          PRODUCT_DISPLAY_NAME: "hiterm (Dev)"
     dependencies: []
     info:
       path: hiterm/App/Info.plist
@@ -82,6 +87,7 @@ targets:
         CFBundleIconName: AppIcon
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleDisplayName: "$(PRODUCT_DISPLAY_NAME)"
     entitlements:
       path: hiterm/App/hiterm.entitlements
     preBuildScripts: []
