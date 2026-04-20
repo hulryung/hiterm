@@ -516,6 +516,18 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
     // MARK: - Mouse Input
 
     override func mouseDown(with event: NSEvent) {
+        // Pane-move drag: Cmd+Shift+mouseDown delegates to the enclosing split view.
+        if event.modifierFlags.contains([.command, .shift]) {
+            var view: NSView? = self.superview
+            while let v = view {
+                if let splitView = v as? TerminalSplitView {
+                    splitView.runPaneDragLoop(source: self)
+                    return
+                }
+                view = v.superview
+            }
+            // Fall through if no split view ancestor — shouldn't happen in practice.
+        }
         window?.makeFirstResponder(self)
         guard let surface else { return }
         let mods = Self.ghosttyMods(from: event.modifierFlags)
