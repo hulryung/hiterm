@@ -571,7 +571,19 @@ class TerminalSurfaceView: NSView, NSTextInputClient {
 
     var swipeTracker: SwipeTracker?
 
+    // Diagnostic: track first scroll event and precise↔non-precise transitions.
+    // Investigating intermittent bug where mouse-wheel scroll only works after
+    // a trackpad scroll has happened. Notice-level so it persists in the system
+    // log; transitions only so we don't spam.
+    private var lastScrollPrecise: Bool?
+
     override func scrollWheel(with event: NSEvent) {
+        let precise = event.hasPreciseScrollingDeltas
+        if lastScrollPrecise != precise {
+            let prev = lastScrollPrecise.map { $0 ? "precise" : "discrete" } ?? "nil"
+            Log.input.notice("scrollWheel transition \(prev, privacy: .public)→\(precise ? "precise" : "discrete", privacy: .public) dy=\(event.scrollingDeltaY, privacy: .public) phase=\(event.phase.rawValue, privacy: .public) momentum=\(event.momentumPhase.rawValue, privacy: .public)")
+            lastScrollPrecise = precise
+        }
         // Let swipe tracker try first (handles direction lock internally).
         if let tracker = swipeTracker, tracker.handleEvent(event) {
             return  // Horizontal swipe consumed the event.
