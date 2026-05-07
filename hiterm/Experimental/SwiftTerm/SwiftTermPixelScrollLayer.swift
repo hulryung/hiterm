@@ -174,7 +174,7 @@ final class SwiftTermPixelScrollLayer: NSView {
         // interact with bounds/layout, so it survives redraws cleanly.
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        layer.transform = CATransform3DMakeTranslation(0, accumulatedPixelOffset, 0)
+        layer.transform = CATransform3DMakeTranslation(0, -accumulatedPixelOffset, 0)
         CATransaction.commit()
     }
 }
