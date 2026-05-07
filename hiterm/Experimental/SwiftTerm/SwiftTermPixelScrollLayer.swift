@@ -18,11 +18,12 @@ import SwiftTerm
 /// window — when a scroll event hits any view inside `surface`, we route it
 /// through `scrollWheel(with:)` here and swallow the event before AppKit
 /// dispatches it to SwiftTerm's own handler.
-final class SwiftTermPixelScrollLayer: NSView {
+final class SwiftTermPixelScrollLayer: NSView, CAAnimationDelegate {
 
     let surface: SwiftTermSurfaceView
 
     private var accumulatedPixelOffset: CGFloat = 0
+    private var isAnimatingAdvance: Bool = false
     private var scrollMonitor: Any?
 
     override init(frame: NSRect) {
@@ -187,6 +188,11 @@ final class SwiftTermPixelScrollLayer: NSView {
 
     private func applyLayerTranslation() {
         guard let layer = surface.layer else { return }
+        // While an output-advance animation is running, leave the layer
+        // transform alone so the animation's interpolated value stays visible.
+        // The animationDidStop callback re-invokes this method to resume
+        // user-scroll translation.
+        if isAnimatingAdvance { return }
         // SwiftTerm 1.13.0: translating via `bounds.origin.y` competes with the
         // surface's internal `setNeedsDisplay` / `draw(_:)` cycle on row commits,
         // producing visible micro-stutter at slow scroll. `transform`-based
@@ -198,8 +204,37 @@ final class SwiftTermPixelScrollLayer: NSView {
         CATransaction.commit()
     }
 
-    /// Stub. Full implementation in Task 12.
+    /// Called by SwiftTermSurfaceView when SwiftTerm's `didAdvanceViewport`
+    /// fires. Plays an 80ms slide-in: the surface layer is translated +rowHeight
+    /// (visually showing the prior viewport with the just-appended line drawn
+    /// in extraRowsBelow), then animated back to identity. Bursts of multi-line
+    /// or rapid advances skip the animation so output throughput is unaffected.
     func handleViewportAdvance(lines: Int) {
-        Log.swiftterm.debug("handleViewportAdvance stub called: lines=\(lines)")
+        guard lines == 1, !isAnimatingAdvance else { return }
+        guard let layer = surface.layer else { return }
+        let h = rowHeight
+        isAnimatingAdvance = true
+
+        let from = CATransform3DMakeTranslation(0, h, 0)
+        let to = CATransform3DIdentity
+
+        let anim = CABasicAnimation(keyPath: "transform")
+        anim.fromValue = NSValue(caTransform3D: from)
+        anim.toValue = NSValue(caTransform3D: to)
+        anim.duration = 0.08
+        anim.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        anim.delegate = self
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer.transform = to
+        layer.add(anim, forKey: "advanceSlide")
+        CATransaction.commit()
+    }
+
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+        isAnimatingAdvance = false
+        // Re-apply user-scroll translation in case the user scrolled during animation.
+        applyLayerTranslation()
     }
 }
