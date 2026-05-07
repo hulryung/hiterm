@@ -23,6 +23,8 @@ final class SwiftTermSurfaceView: LocalProcessTerminalView, LocalProcessTerminal
             ?? NSFont(name: "D2CodingLigature Nerd Font Mono", size: 13)
             ?? NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
         font = resolved
+        extraRowsAbove = 1
+        extraRowsBelow = 1
         Log.swiftterm.info("SwiftTermSurfaceView configured (font=\(resolved.fontName, privacy: .public) 13)")
 
         // SwiftTerm 1.13.0: `MacTerminalView.scroller` is `private`

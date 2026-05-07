@@ -29,8 +29,11 @@ final class SwiftTermPixelScrollLayer: NSView {
         self.surface = SwiftTermSurfaceView(frame: frame)
         super.init(frame: frame)
         wantsLayer = true
+        layer?.masksToBounds = true
         addSubview(surface)
-        surface.autoresizingMask = [.width, .height]
+        // Surface frame is laid out manually in layout(); it must extend
+        // one rowHeight above and below the wrapper bounds to expose the
+        // SwiftTerm fork's extraRowsAbove/Below regions.
         surface.wantsLayer = true
     }
 
@@ -49,6 +52,11 @@ final class SwiftTermPixelScrollLayer: NSView {
     override func becomeFirstResponder() -> Bool {
         window?.makeFirstResponder(surface)
         return true
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        needsLayout = true
     }
 
     override func viewDidMoveToWindow() {
@@ -70,6 +78,18 @@ final class SwiftTermPixelScrollLayer: NSView {
             self.scrollWheel(with: event)
             return nil
         }
+
+        needsLayout = true
+    }
+
+    override func layout() {
+        super.layout()
+        let h = rowHeight
+        var f = bounds
+        f.size.height += 2 * h
+        f.origin.y = -h
+        f.origin.x = 0
+        surface.frame = f
     }
 
     // MARK: - Scroll
