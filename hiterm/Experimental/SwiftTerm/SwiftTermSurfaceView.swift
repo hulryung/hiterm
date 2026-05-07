@@ -19,8 +19,11 @@ final class SwiftTermSurfaceView: LocalProcessTerminalView, LocalProcessTerminal
 
     private func configure() {
         processDelegate = self
-        font = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
-        Log.swiftterm.info("SwiftTermSurfaceView configured (font=monospacedSystemFont 13)")
+        let resolved = NSFont(name: "MesloLGS NF", size: 13)
+            ?? NSFont(name: "D2CodingLigature Nerd Font Mono", size: 13)
+            ?? NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+        font = resolved
+        Log.swiftterm.info("SwiftTermSurfaceView configured (font=\(resolved.fontName, privacy: .public) 13)")
     }
 
     /// Called by the experiment window controller once the view is in a window.
