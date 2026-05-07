@@ -167,11 +167,14 @@ final class SwiftTermPixelScrollLayer: NSView {
 
     private func applyLayerTranslation() {
         guard let layer = surface.layer else { return }
-        var bounds = layer.bounds
-        bounds.origin.y = accumulatedPixelOffset
+        // SwiftTerm 1.13.0: translating via `bounds.origin.y` competes with the
+        // surface's internal `setNeedsDisplay` / `draw(_:)` cycle on row commits,
+        // producing visible micro-stutter at slow scroll. `transform`-based
+        // translation is applied late in the render pipeline and does not
+        // interact with bounds/layout, so it survives redraws cleanly.
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        layer.bounds = bounds
+        layer.transform = CATransform3DMakeTranslation(0, accumulatedPixelOffset, 0)
         CATransaction.commit()
     }
 }
