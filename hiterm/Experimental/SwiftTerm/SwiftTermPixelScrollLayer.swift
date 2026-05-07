@@ -197,4 +197,9 @@ final class SwiftTermPixelScrollLayer: NSView {
         layer.transform = CATransform3DMakeTranslation(0, -accumulatedPixelOffset, 0)
         CATransaction.commit()
     }
+
+    /// Stub. Full implementation in Task 12.
+    func handleViewportAdvance(lines: Int) {
+        Log.swiftterm.debug("handleViewportAdvance stub called: lines=\(lines)")
+    }
 }

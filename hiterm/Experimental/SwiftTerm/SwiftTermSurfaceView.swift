@@ -65,4 +65,11 @@ final class SwiftTermSurfaceView: LocalProcessTerminalView, LocalProcessTerminal
         Log.swiftterm.info("zsh terminated (exitCode=\(exitCode ?? -1)), closing window")
         DispatchQueue.main.async { source.window?.close() }
     }
+
+    func didAdvanceViewport(source: TerminalView, by lines: Int) {
+        Log.swiftterm.debug("Viewport advanced by \(lines)")
+        if let wrapper = superview as? SwiftTermPixelScrollLayer {
+            wrapper.handleViewportAdvance(lines: lines)
+        }
+    }
 }
