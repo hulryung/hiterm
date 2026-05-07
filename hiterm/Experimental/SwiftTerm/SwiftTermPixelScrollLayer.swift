@@ -80,11 +80,39 @@ final class SwiftTermPixelScrollLayer: NSView {
 
         // Treat positive scrollingDeltaY as "user pushed content up" (show older lines).
         accumulatedPixelOffset += delta
+        let h = rowHeight
 
-        commitFullRows()
+        while accumulatedPixelOffset >= h {
+            if !tryScrollTerminal(linesUp: 1) {
+                // Reached top of scrollback; drop the residual so the layer
+                // does not wobble at sub-row offsets while no actual scrolling
+                // is happening.
+                accumulatedPixelOffset = 0
+                break
+            }
+            accumulatedPixelOffset -= h
+        }
+        while accumulatedPixelOffset <= -h {
+            if !tryScrollTerminal(linesUp: -1) {
+                accumulatedPixelOffset = 0
+                break
+            }
+            accumulatedPixelOffset += h
+        }
+
+        // Sub-row residual at a hard boundary still needs clamping: if the
+        // user keeps pushing into the boundary, accumulator < rowHeight will
+        // never trigger a terminal scroll, but applyLayerTranslation() would
+        // still shift the layer — that is the trembling we want to avoid.
+        if accumulatedPixelOffset > 0 && isAtTopOfScrollback() {
+            accumulatedPixelOffset = 0
+        } else if accumulatedPixelOffset < 0 && isAtBottomOfScrollback() {
+            accumulatedPixelOffset = 0
+        }
+
         applyLayerTranslation()
 
-        Log.swiftterm.debug("scrollWheel delta=\(delta) accum=\(self.accumulatedPixelOffset)")
+        Log.swiftterm.debug("scrollWheel delta=\(delta) accum=\(self.accumulatedPixelOffset) pos=\(self.surface.scrollPosition)")
     }
 
     /// SwiftTerm 1.13.0: `cellDimension` is internal, so we cannot read row
@@ -98,29 +126,43 @@ final class SwiftTermPixelScrollLayer: NSView {
         return h > 0 ? h : 18
     }
 
-    private func commitFullRows() {
-        let h = rowHeight
-        while accumulatedPixelOffset >= h {
-            scrollTerminal(linesUp: 1)
-            accumulatedPixelOffset -= h
-        }
-        while accumulatedPixelOffset <= -h {
-            scrollTerminal(linesUp: -1)
-            accumulatedPixelOffset += h
-        }
-    }
-
     /// SwiftTerm 1.13.0: instead of calling `terminal.getTopVisibleRow()` +
     /// `terminal.scrollTo(row:)` + `surface.queuePendingDisplay()` (the last
     /// is internal to SwiftTerm), use the public `scrollUp(lines:)` /
     /// `scrollDown(lines:)` on the terminal view, which clamp to bounds,
     /// call `scrollTo(row:)` internally, and trigger a redraw.
-    private func scrollTerminal(linesUp: Int) {
+    ///
+    /// Returns `true` if the terminal actually scrolled. We detect movement
+    /// via the public `scrollPosition` property
+    /// (AppleTerminalView.swift:1796), which is derived from `yDisp` and
+    /// returns 0 at the top of scrollback, 1 at the live bottom. Comparing
+    /// it before/after is sufficient to know whether SwiftTerm clamped.
+    @discardableResult
+    private func tryScrollTerminal(linesUp: Int) -> Bool {
+        let before = surface.scrollPosition
         if linesUp > 0 {
             surface.scrollUp(lines: linesUp)
         } else if linesUp < 0 {
             surface.scrollDown(lines: -linesUp)
+        } else {
+            return false
         }
+        return surface.scrollPosition != before
+    }
+
+    /// At top of scrollback: oldest line shown, no more older lines exist.
+    /// `scrollPosition == 0` matches `yDisp <= 0` per AppleTerminalView.swift:1799.
+    private func isAtTopOfScrollback() -> Bool {
+        return surface.scrollPosition <= 0
+    }
+
+    /// At bottom of scrollback: viewport pinned to the live tail.
+    /// `scrollPosition == 1` matches `yDisp >= maxScrollback` per
+    /// AppleTerminalView.swift:1804. Also true when there is no scrollback
+    /// at all (alternate buffer or empty history) — in that case there is
+    /// nowhere to scroll, so clamping is correct.
+    private func isAtBottomOfScrollback() -> Bool {
+        return surface.scrollPosition >= 1 || !surface.canScroll
     }
 
     private func applyLayerTranslation() {

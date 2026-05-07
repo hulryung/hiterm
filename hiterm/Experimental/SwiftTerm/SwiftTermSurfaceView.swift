@@ -24,6 +24,19 @@ final class SwiftTermSurfaceView: LocalProcessTerminalView, LocalProcessTerminal
             ?? NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
         font = resolved
         Log.swiftterm.info("SwiftTermSurfaceView configured (font=\(resolved.fontName, privacy: .public) 13)")
+
+        // SwiftTerm 1.13.0: `MacTerminalView.scroller` is `private`
+        // (MacTerminalView.swift:152), so we hide it by finding the NSScroller
+        // subview directly. The PoC pixel-scroll layer translates the entire
+        // surface layer, which would otherwise drag the scroller along with
+        // the cells and look "trembly". Hiding it removes that artifact.
+        hideEmbeddedScroller()
+    }
+
+    private func hideEmbeddedScroller() {
+        for sub in subviews where sub is NSScroller {
+            sub.isHidden = true
+        }
     }
 
     /// Called by the experiment window controller once the view is in a window.
