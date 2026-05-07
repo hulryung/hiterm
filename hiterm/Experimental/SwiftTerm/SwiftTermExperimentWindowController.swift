@@ -4,7 +4,8 @@ import AppKit
 /// a SwiftTermSurfaceView (no scroll wrapper yet — Task 9 wraps it).
 final class SwiftTermExperimentWindowController: NSWindowController, NSWindowDelegate {
 
-    private let surface = SwiftTermSurfaceView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+    private let scrollLayer = SwiftTermPixelScrollLayer(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+    private var surface: SwiftTermSurfaceView { scrollLayer.surface }
 
     init() {
         let window = NSWindow(
@@ -16,8 +17,8 @@ final class SwiftTermExperimentWindowController: NSWindowController, NSWindowDel
         window.center()
         super.init(window: window)
         window.delegate = self
-        window.contentView = surface
-        surface.autoresizingMask = [.width, .height]
+        window.contentView = scrollLayer
+        scrollLayer.autoresizingMask = [.width, .height]
     }
 
     required init?(coder: NSCoder) {
