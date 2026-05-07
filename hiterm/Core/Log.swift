@@ -28,6 +28,8 @@ enum Log {
     static let ui = Logger(subsystem: subsystem, category: "ui")
     /// GhosttyApp lifecycle, actions, callbacks.
     static let ghostty = Logger(subsystem: subsystem, category: "ghostty")
+    /// SwiftTerm experiment surface, window, and pixel-scroll layer.
+    static let swiftterm = Logger(subsystem: subsystem, category: "swiftterm")
 
     // MARK: - Verbose Debug Flag
 
@@ -35,7 +37,7 @@ enum Log {
     /// Set HITERM_DEBUG=all for everything, or HITERM_DEBUG=config,surface for specific modules.
     private static let verboseCategories: Set<String> = {
         guard let value = ProcessInfo.processInfo.environment["HITERM_DEBUG"] else { return [] }
-        if value == "all" { return ["config", "surface", "input", "ui", "ghostty"] }
+        if value == "all" { return ["config", "surface", "input", "ui", "ghostty", "swiftterm"] }
         return Set(value.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) })
     }()
 
