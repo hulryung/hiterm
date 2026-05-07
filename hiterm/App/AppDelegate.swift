@@ -9,6 +9,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var ghosttyAppInstance: GhosttyApp? { ghosttyApp }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if SwiftTermExperimentEntry.isEnabled {
+            SwiftTermExperimentEntry.openWindow()
+            return
+        }
+
         NSApp.setActivationPolicy(.regular)
 
         ghosttyApp = GhosttyApp()
