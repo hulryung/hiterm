@@ -8,9 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		08E33835EC9B2EA6A4FE536B /* SplitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F65FF5E61FC612F5F2B9DC /* SplitView.swift */; };
+		0AA610BC3A4588962C7CD263 /* SwiftTermSurfaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5CE2E6E1660645B2E5BDBE1 /* SwiftTermSurfaceView.swift */; };
+		332467F36992C8047E57F7BC /* SwiftTermExperimentEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D078E44D4B9A70CA067F965 /* SwiftTermExperimentEntry.swift */; };
 		3E5E8DA31EE45E74F3B2BF7B /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = E8A4F20FA9A9FEED30CE7485 /* SwiftTerm */; };
 		658CF8E15A3B0D92D51FEE73 /* GhosttyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD5F995D29B9C2B0AFE0F82 /* GhosttyApp.swift */; };
 		65F695CA9266824C75EC8FAE /* TerminalSurfaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AD270D5A30C5FA4E374F025 /* TerminalSurfaceView.swift */; };
+		673E02D06743446AD0377D0C /* SwiftTermPixelScrollLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACF2B1FD26B2E74C1873141 /* SwiftTermPixelScrollLayer.swift */; };
 		7C4EC249D30BF87D3CDF0F25 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9769B7213206E6881B2C5A60 /* Assets.xcassets */; };
 		8EE79740237F1D124DA75EB6 /* PaneDragOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B038A1AEF4DEF9BF6B78424E /* PaneDragOverlay.swift */; };
 		A3F6A16307BD39DD2CFA3713 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080149AB5FFF13E551CA4A5C /* SettingsWindowController.swift */; };
@@ -20,6 +23,7 @@
 		C225DEB0A272641226D70968 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF04450FE71D8B46904AF809 /* MainWindowController.swift */; };
 		C49E9A1F7C74354AE9B22EC2 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D21751093EE69E62D873B364 /* main.swift */; };
 		C7D9C16B1A78071EE9DAEAF2 /* SearchOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2984C8ED410A004E537302A /* SearchOverlayView.swift */; };
+		DA2CDFE5A9B72E1B756907A9 /* SwiftTermExperimentWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E101C82A69932A35AFD9519B /* SwiftTermExperimentWindowController.swift */; };
 		E3D630AD9A035BF892C6CE42 /* SwipeTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E872008AD7E72FD2615BA7 /* SwipeTracker.swift */; };
 		EB94538A278D03A3194F0CB0 /* SplitNodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A998081965C45CC2C2173F /* SplitNodeTests.swift */; };
 		EBFBCB7720794CB29A06597D /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CC4A24FF2232A7ED3EF894 /* SettingsManager.swift */; };
@@ -38,6 +42,7 @@
 
 /* Begin PBXFileReference section */
 		080149AB5FFF13E551CA4A5C /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		0D078E44D4B9A70CA067F965 /* SwiftTermExperimentEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftTermExperimentEntry.swift; sourceTree = "<group>"; };
 		0FBB4EE1E20383112C0B9BFA /* ghostty-config */ = {isa = PBXFileReference; path = "ghostty-config"; sourceTree = "<group>"; };
 		26A40F0BEDDE6D6BE95F62CC /* hitermTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = hitermTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2AD270D5A30C5FA4E374F025 /* TerminalSurfaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSurfaceView.swift; sourceTree = "<group>"; };
@@ -45,8 +50,10 @@
 		568369CBB2D9A41F66B37F7F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7AD5F995D29B9C2B0AFE0F82 /* GhosttyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyApp.swift; sourceTree = "<group>"; };
 		7E10561221C5F26E7D6C874E /* TabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarView.swift; sourceTree = "<group>"; };
+		8ACF2B1FD26B2E74C1873141 /* SwiftTermPixelScrollLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftTermPixelScrollLayer.swift; sourceTree = "<group>"; };
 		9769B7213206E6881B2C5A60 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A2984C8ED410A004E537302A /* SearchOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchOverlayView.swift; sourceTree = "<group>"; };
+		A5CE2E6E1660645B2E5BDBE1 /* SwiftTermSurfaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftTermSurfaceView.swift; sourceTree = "<group>"; };
 		A5F65FF5E61FC612F5F2B9DC /* SplitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitView.swift; sourceTree = "<group>"; };
 		AF04450FE71D8B46904AF809 /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
 		B038A1AEF4DEF9BF6B78424E /* PaneDragOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaneDragOverlay.swift; sourceTree = "<group>"; };
@@ -56,6 +63,7 @@
 		D3CC4A24FF2232A7ED3EF894 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		DAC9EEDA5636D206454B874B /* .zshenv */ = {isa = PBXFileReference; path = .zshenv; sourceTree = "<group>"; };
 		DF7522B8E23703B3A6C82B90 /* Log.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Log.swift; sourceTree = "<group>"; };
+		E101C82A69932A35AFD9519B /* SwiftTermExperimentWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftTermExperimentWindowController.swift; sourceTree = "<group>"; };
 		E3A7C29A9012257BE8DFDFE0 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E45B8D5494C54E79929A9F0D /* hiterm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hiterm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9A998081965C45CC2C2173F /* SplitNodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitNodeTests.swift; sourceTree = "<group>"; };
@@ -73,6 +81,25 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1C491E22D89FE0B109BDDF19 /* Experimental */ = {
+			isa = PBXGroup;
+			children = (
+				1F31DFE4CE61DF2DF3CA1BC8 /* SwiftTerm */,
+			);
+			path = Experimental;
+			sourceTree = "<group>";
+		};
+		1F31DFE4CE61DF2DF3CA1BC8 /* SwiftTerm */ = {
+			isa = PBXGroup;
+			children = (
+				0D078E44D4B9A70CA067F965 /* SwiftTermExperimentEntry.swift */,
+				E101C82A69932A35AFD9519B /* SwiftTermExperimentWindowController.swift */,
+				8ACF2B1FD26B2E74C1873141 /* SwiftTermPixelScrollLayer.swift */,
+				A5CE2E6E1660645B2E5BDBE1 /* SwiftTermSurfaceView.swift */,
+			);
+			path = SwiftTerm;
+			sourceTree = "<group>";
+		};
 		2354ABB4D54E9DDEABA23A60 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -114,6 +141,7 @@
 				9769B7213206E6881B2C5A60 /* Assets.xcassets */,
 				FCA0FEDADB4DBF751C862818 /* App */,
 				2354ABB4D54E9DDEABA23A60 /* Core */,
+				1C491E22D89FE0B109BDDF19 /* Experimental */,
 				5D4EF7F19A4F671965A47801 /* Input */,
 				93BE989E037607D14AC3A12D /* Resources */,
 				D97F848F70730C451A393676 /* Views */,
@@ -323,6 +351,10 @@
 				BFFA000C7DD20C8745D3363C /* SettingsView.swift in Sources */,
 				A3F6A16307BD39DD2CFA3713 /* SettingsWindowController.swift in Sources */,
 				08E33835EC9B2EA6A4FE536B /* SplitView.swift in Sources */,
+				332467F36992C8047E57F7BC /* SwiftTermExperimentEntry.swift in Sources */,
+				DA2CDFE5A9B72E1B756907A9 /* SwiftTermExperimentWindowController.swift in Sources */,
+				673E02D06743446AD0377D0C /* SwiftTermPixelScrollLayer.swift in Sources */,
+				0AA610BC3A4588962C7CD263 /* SwiftTermSurfaceView.swift in Sources */,
 				E3D630AD9A035BF892C6CE42 /* SwipeTracker.swift in Sources */,
 				C041F963EAC6FA4FDE9ABF7E /* TabBarView.swift in Sources */,
 				65F695CA9266824C75EC8FAE /* TerminalSurfaceView.swift in Sources */,
