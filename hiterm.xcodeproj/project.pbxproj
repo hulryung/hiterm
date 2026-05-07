@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		08E33835EC9B2EA6A4FE536B /* SplitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5F65FF5E61FC612F5F2B9DC /* SplitView.swift */; };
+		3E5E8DA31EE45E74F3B2BF7B /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = E8A4F20FA9A9FEED30CE7485 /* SwiftTerm */; };
 		658CF8E15A3B0D92D51FEE73 /* GhosttyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AD5F995D29B9C2B0AFE0F82 /* GhosttyApp.swift */; };
 		65F695CA9266824C75EC8FAE /* TerminalSurfaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AD270D5A30C5FA4E374F025 /* TerminalSurfaceView.swift */; };
 		7C4EC249D30BF87D3CDF0F25 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9769B7213206E6881B2C5A60 /* Assets.xcassets */; };
@@ -59,6 +60,17 @@
 		E45B8D5494C54E79929A9F0D /* hiterm.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hiterm.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9A998081965C45CC2C2173F /* SplitNodeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitNodeTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C514800DA7EE10E6D7F16A4C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3E5E8DA31EE45E74F3B2BF7B /* SwiftTerm in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		2354ABB4D54E9DDEABA23A60 /* Core */ = {
@@ -198,6 +210,7 @@
 				EFB6C563A48BF3E51FB4464B /* Copy config resources */,
 				76CD059F28D9EFDC8A2369BF /* SwiftLint */,
 				F86B041787C739A1926A0C06 /* Resources */,
+				C514800DA7EE10E6D7F16A4C /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -205,6 +218,7 @@
 			);
 			name = hiterm;
 			packageProductDependencies = (
+				E8A4F20FA9A9FEED30CE7485 /* SwiftTerm */,
 			);
 			productName = hiterm;
 			productReference = E45B8D5494C54E79929A9F0D /* hiterm.app */;
@@ -230,6 +244,9 @@
 			);
 			mainGroup = 69708F2B7DAA560439B9307B;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C358CD680CFF68518C93B10E /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9B2B0F76F49BC237C52EBEDD /* Products */;
 			projectDirPath = "";
@@ -634,6 +651,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C358CD680CFF68518C93B10E /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E8A4F20FA9A9FEED30CE7485 /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C358CD680CFF68518C93B10E /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7BAE8E04C4D29AFF7FC96FCC /* Project object */;
 }

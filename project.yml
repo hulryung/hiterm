@@ -10,6 +10,11 @@ settings:
     SWIFT_VERSION: "5.10"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
 
+packages:
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    from: "1.2.0"
+
 targets:
   hiterm:
     type: application
@@ -79,7 +84,8 @@ targets:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: com.hiterm.app.debug
           PRODUCT_DISPLAY_NAME: "hiterm (Dev)"
-    dependencies: []
+    dependencies:
+      - package: SwiftTerm
     info:
       path: hiterm/App/Info.plist
       properties:
