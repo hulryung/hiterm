@@ -148,3 +148,35 @@ In either case, append a short result memo to the bottom of this file under a `#
 ## Out of This Spec
 
 The production migration plan (replacing the ghostty path on `main`, handling tabs/splits/search/IME/settings sync) is intentionally not designed here. It will be drafted as a separate spec only if this experiment succeeds.
+
+## Result (recorded 2026-05-07)
+
+Branch: `experiment/swiftterm`. Resolved SwiftTerm: **1.13.0**.
+
+- **Sub-row stop visible**: PASS — slow trackpad scroll visibly stops with rows partially clipped at the top edge. Sub-row pixel offset is observable.
+- **Boundary behavior**: PASS — at top/bottom of scrollback, accumulator clamps to 0 (no further translation, no shake) thanks to public `scrollPosition` / `canScroll` probes.
+- **Mid-row smoothness**: PASS (with one residual concern) — switching from `bounds.origin.y` translation to `layer.transform` removed most micro-stutter. A faint occasional artifact may remain at very slow speeds but is acceptable for PoC.
+- **Regression (no env var → ghostty path)**: PASS — installed/Debug ghostty path unchanged.
+- **Korean IME / heavy-output performance / inertial fast-swipe**: not exercised at this gate (per spec, deferred).
+
+### SwiftTerm 1.13.0 API substitutions made
+
+1. **Wheel event interception**: `MacTerminalView.scrollWheel` is `public` (not `open`) and consumes events without `super`. Used `NSEvent.addLocalMonitorForEvents` scoped to the experiment window, hit-test gated to inside `surface`, to route events into the wrapper before SwiftTerm handles them.
+2. **Row height**: `cellDimension` is `internal`. Approximated via `surface.font.boundingRectForFont.size.height`. May be off by a fraction; not visible in PoC use, but worth replacing with a precise source if we go to production.
+3. **Scrollback advance**: `Terminal.getTopVisibleRow()` / `scrollTo(row:)` and `surface.queuePendingDisplay()` are `internal`. Replaced by public `surface.scrollUp(lines:)` / `scrollDown(lines:)` which clamp to bounds and trigger redraw internally.
+4. **Boundary detection**: public `surface.scrollPosition: Double` (0 at top, 1 at bottom) and `surface.canScroll: Bool` cover the boundary predicate without private API.
+5. **Scroller hidden**: `MacTerminalView.scroller` is `private`. Iterated `subviews` and hid any `NSScroller`. The internal `NSScroller` ivar fights `layer.transform`-based translation, so PoC hides it. A real implementation would either replace it with our own or counter-transform it.
+6. **Translation idiom**: `layer.transform = CATransform3DMakeTranslation(0, -accum, 0)` instead of `bounds.origin.y = accum`. Bounds-origin translation competed with SwiftTerm's `setNeedsDisplay`/`draw(_:)` cycle on row commits; transform survives the redraw cleanly.
+
+### Headline follow-up for the migration spec
+
+**Pre-render rows that are about to enter / leave the viewport.** Currently SwiftTerm draws exactly N rows (the visible grid). During sub-row scroll, the layer transform exposes empty space where the next row should be peeking in — that row only appears at row-commit time, producing a visible "pop" rather than smooth emergence. Same for the leaving row. This issue is *exactly* the kind of capability the experiment was meant to enable: it cannot be fixed on libghostty (Metal-backed surface, fixed viewport), but on SwiftTerm it is achievable with one of:
+
+1. Render N+2 rows in `surface` and clip the wrapper to N rows, so the extra top/bottom rows can peek in during transition. Requires patching SwiftTerm to draw beyond the live grid (or forking).
+2. Composite two rendered viewports (before/after the row commit) and cross-fade them during the sub-row transition. Heavier but does not need SwiftTerm changes.
+
+This is the single most valuable thing we'd ship with the production migration. Treat it as the migration spec's headline goal.
+
+### Decision
+
+**Bring forward to production migration spec.** SwiftTerm gives us the pixel-level rendering control libghostty did not — the central question of the experiment. The migration spec is out of scope for this branch and will be drafted separately. Preserve `experiment/swiftterm` for reference.
