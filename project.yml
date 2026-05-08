@@ -13,7 +13,7 @@ settings:
 packages:
   SwiftTerm:
     url: https://github.com/hulryung/SwiftTerm
-    revision: 6c78c9a76952a7f03ae41135b2d0d442574eccef
+    revision: 47ada2c48123821d2a04e4da8d0ccd66976529a2
 
 targets:
   hiterm:

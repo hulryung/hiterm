@@ -66,7 +66,7 @@ final class SwiftTermSurfaceView: LocalProcessTerminalView, LocalProcessTerminal
         DispatchQueue.main.async { source.window?.close() }
     }
 
-    func didAdvanceViewport(source: TerminalView, by lines: Int) {
+    override func didAdvanceViewport(by lines: Int) {
         Log.swiftterm.debug("Viewport advanced by \(lines)")
         if let wrapper = superview as? SwiftTermPixelScrollLayer {
             wrapper.handleViewportAdvance(lines: lines)

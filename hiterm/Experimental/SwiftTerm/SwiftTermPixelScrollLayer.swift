@@ -215,19 +215,28 @@ final class SwiftTermPixelScrollLayer: NSView, CAAnimationDelegate {
         let h = rowHeight
         isAnimatingAdvance = true
 
-        let from = CATransform3DMakeTranslation(0, h, 0)
-        let to = CATransform3DIdentity
+        // Force SwiftTerm to redraw the surface synchronously to the NEW
+        // post-advance state BEFORE we start the animation. Otherwise the
+        // first composited frame still shows the OLD viewport (SwiftTerm's
+        // setNeedsDisplay defers drawing to the next render cycle), and on
+        // the second frame the content jumps by one row when the redraw
+        // catches up — which the user perceives as an overshoot artifact.
+        surface.displayIfNeeded()
 
-        let anim = CABasicAnimation(keyPath: "transform")
-        anim.fromValue = NSValue(caTransform3D: from)
-        anim.toValue = NSValue(caTransform3D: to)
+        // Animate only the y component on a dedicated keyPath. CATransform3D
+        // matrix interpolation can produce subtle non-linear paths, which the
+        // user observed as an overshoot artifact ("slightly past then back").
+        // Single-axis float interpolation is unambiguously linear.
+        let anim = CABasicAnimation(keyPath: "transform.translation.y")
+        anim.fromValue = -h
+        anim.toValue = 0
         anim.duration = 0.08
         anim.timingFunction = CAMediaTimingFunction(name: .easeOut)
         anim.delegate = self
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        layer.transform = to
+        layer.transform = CATransform3DIdentity
         layer.add(anim, forKey: "advanceSlide")
         CATransaction.commit()
     }
