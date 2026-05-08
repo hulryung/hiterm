@@ -217,3 +217,42 @@ In either case, append a short result memo under a `## Result` heading and prese
 ## Out of This Spec
 
 The full production migration (replacing the ghostty path with the SwiftTerm path including tabs, splits, search, IME, settings sync, themes) remains its own future spec. This PoC is a prerequisite that de-risks the migration's headline value claim.
+
+## Result (recorded 2026-05-08)
+
+Branch: hiterm `experiment/swiftterm` (HEAD `df0a857`). Fork: `hulryung/SwiftTerm` `hiterm/extra-rows` (HEAD `47ada2c`).
+
+- **Fork builds standalone**: PASS (`GITHUB_ACTIONS=true swift build` clean — `Benchmarks` target's jemalloc dep skipped, irrelevant to library)
+- **hiterm builds against the fork**: PASS — SPM resolves and pins the fork revision; existing build pipeline unchanged
+- **Extra row visible during user scroll**: not separately exercised — output slide-in test below was the gating criterion
+- **Single-line slide-in (`/tmp/slow.sh`)**: PASS — once correctness fixes landed, new lines visibly slide up from below at 80ms ease-out
+- **Burst output unaffected (`seq 1 100`, `cat … | head -200`)**: PASS — `lines == 1, !isAnimatingAdvance` guard drops bursts
+- **Cursor not in extra-row gutters**: PASS (CG path's `CaretView` self-removes when its row is outside `[yDisp, yDisp+rows)`; no patch needed)
+- **Hit-test clamps to viewport**: PASS (Mac path patched in fork)
+- **Regression (ghostty path with no env var)**: PASS
+
+### Surprises and fixes during validation
+
+1. **Two renderers, not one.** Task 3 survey discovered both a CoreGraphics path (`AppleTerminalView.drawTerminalContents`) and a Metal path (`Apple/Metal/MetalTerminalRenderer.swift`). PoC patches CG only; Metal is follow-up.
+
+2. **`AppleTerminalView` is not a class.** It's an `extension TerminalView { ... }`. `TerminalView` is declared per-platform (`MacTerminalView.swift` and `iOSTerminalView.swift`) as peer classes, not subclasses. `extraRowsAbove` / `extraRowsBelow` were added on both class declarations.
+
+3. **Loop indices are absolute buffer rows**, not viewport-relative. The patch is `firstRow -= extraRowsAbove; lastRow += extraRowsBelow`, relying on the existing out-of-buffer guards.
+
+4. **PTY size compensation needed.** Sizing logic was patched at `resetFont`, `setupOptions`, `processSizeChange` to subtract `extraRowsAbove + extraRowsBelow` so the PTY only sees the live grid count.
+
+5. **Selection guard inside `selectedColumnsRange`**, not at call sites — extra-row indices return `nil`, propagating through every consumer.
+
+6. **`didAdvanceViewport` could not be a protocol method.** Initial implementation declared it on `TerminalViewDelegate` with a default empty impl in a protocol extension. The actual delegate was `LocalProcessTerminalView`, whose witness table for the protocol bound to the empty default. The override on `SwiftTermSurfaceView` was shadowed (compile-shadowed, not dynamic-overridden) and never called. Resolved by switching `didAdvanceViewport` to a `open func` on the `TerminalView` class (Mac) and calling `self.didAdvanceViewport(by:)` from `scrolled(source:yDisp:)`. Class-method dispatch is dynamic and reaches the most-derived override.
+
+7. **Animation sign and timing.** `transform.translation.y` in our wrapper's coord system: `+h` shifts content UP, `-h` shifts content DOWN. For an output slide-in (new line should emerge from below), the animation must go from `-h` → `0`. Earlier `+h` → `0` produced a "jumps up then settles" artifact (the user's exact description).
+
+8. **Synchronous redraw before animation.** Without `surface.displayIfNeeded()` before adding the animation, the first composited frame still showed the pre-advance buffer state — SwiftTerm's `setNeedsDisplay` defers drawing to the next render cycle. The result was a visible 1-row content jump on the second frame. Forcing redraw inside `handleViewportAdvance` synchronizes the post-advance buffer with the animation's first frame.
+
+### Headline claim status
+
+The headline value of switching off libghostty — that hiterm can render and animate at sub-row pixel resolution — is **validated**. Output slide-in works. The previously identified "rows pop in/out" artifact (the headline issue from the parent experiment spec) is now smoothly animated. SwiftTerm's CG path was patchable with confined, well-bounded fork changes.
+
+### Decision
+
+**Proceed to the production migration spec** as the next step. The fork's `hiterm/extra-rows` branch is preserved on `hulryung/SwiftTerm` for the migration to consume. The migration spec will tackle tab/split/search/IME/settings parity on the SwiftTerm path; smooth row emerge is no longer a research item.
